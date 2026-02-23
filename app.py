@@ -351,6 +351,48 @@ def stock_management():
         app.logger.error(f"Stock management error: {e}")
         return render_template('stock_management.html', products=[])
 
+# ============= ANALYTICS & REPORTS =============
+
+@app.route('/revenue')
+@login_required
+def revenue():
+    try:
+        orders = [doc.to_dict() for doc in db.collection('orders').stream()]
+        total_revenue = sum(o.get('totalAmount', 0) for o in orders if o.get('status') == 'DELIVERED')
+        return render_template('revenue.html', total_revenue=total_revenue, orders=orders)
+    except Exception as e:
+        app.logger.error(f"Revenue error: {e}")
+        return render_template('revenue.html', total_revenue=0, orders=[])
+
+@app.route('/analytics')
+@login_required
+def analytics():
+    return render_template('analytics.html')
+
+@app.route('/notifications')
+@login_required
+def notifications():
+    return render_template('notifications.html')
+
+@app.route('/activity-logs')
+@login_required
+def activity_logs():
+    try:
+        logs = []
+        for doc in db.collection('activity_logs').limit(100).stream():
+            data = doc.to_dict()
+            data['id'] = doc.id
+            logs.append(data)
+        return render_template('activity_logs.html', logs=logs)
+    except Exception as e:
+        app.logger.error(f"Activity logs error: {e}")
+        return render_template('activity_logs.html', logs=[])
+
+@app.route('/settings')
+@login_required
+def settings():
+    return render_template('settings.html')
+
 # ============= NOTIFICATIONS =============
 
 def send_notification(user_id, title, body):
