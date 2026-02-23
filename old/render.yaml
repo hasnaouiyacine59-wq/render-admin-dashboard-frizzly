@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: frizzly-web
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn --bind 0.0.0.0:5000 app:app"
+    envVars:
+      - key: FLASK_APP
+        value: app.py
+      - key: FLASK_ENV
+        value: production
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: frizzly-redis
+          property: connectionString
+      - key: GOOGLE_APPLICATION_CREDENTIALS_JSON
+        generateValue: true
+
+  - type: worker
+    name: frizzly-worker
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "celery -A celery_worker.celery worker --loglevel=info"
+    envVars:
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: frizzly-redis
+          property: connectionString
+      - key: GOOGLE_APPLICATION_CREDENTIALS_JSON
+        generateValue: true
+
+  - type: redis
+    name: frizzly-redis
+    plan: free
+    ipAllowList: [] # Allow all

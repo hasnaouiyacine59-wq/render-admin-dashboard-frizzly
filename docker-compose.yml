@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  web:
+    build: .
+    command: gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:5000 app:app
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+    environment:
+      FLASK_SECRET_KEY: your-flask-secret-key-here # CHANGE THIS IN PRODUCTION
+      FIREBASE_API_KEY: your-firebase-api-key-here # CHANGE THIS IN PRODUCTION
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    depends_on:
+      - redis
+
+  celery_worker:
+    build: .
+    command: celery -A celery_worker.celery_app worker --loglevel=info
+    volumes:
+      - .:/app
+    environment:
+      FLASK_SECRET_KEY: your-flask-secret-key-here # CHANGE THIS IN PRODUCTION
+      FIREBASE_API_KEY: your-firebase-api-key-here # CHANGE THIS IN PRODUCTION
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    depends_on:
+      - redis
+      - web
+
+volumes:
+  redis_data:

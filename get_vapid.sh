@@ -1,0 +1,18 @@
+#!/bin/bash
+
+echo "========================================="
+echo "Get VAPID Key for FCM"
+echo "========================================="
+echo ""
+echo "1. Go to: https://console.firebase.google.com/project/frizzly-9a65f/settings/cloudmessaging"
+echo ""
+echo "2. Scroll down to 'Web Push certificates'"
+echo ""
+echo "3. Click 'Generate key pair' button"
+echo ""
+echo "4. Copy the key that appears"
+echo ""
+echo "5. Run this command with your key:"
+echo ""
+echo "   ./update_vapid.sh 'YOUR_VAPID_KEY_HERE'"
+echo ""

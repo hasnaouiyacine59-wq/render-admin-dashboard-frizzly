@@ -1,0 +1,57 @@
+/home/oo33/.local/lib/python3.8/site-packages/google/auth/__init__.py:52: FutureWarning: You are using a Python version 3.8 past its end of life. Google will update google-auth with critical bug fixes on a best-effort basis, but not with any other fixes or features. Please upgrade your Python version, and then update google-auth.
+  warnings.warn(eol_message.format("3.8"), FutureWarning)
+/home/oo33/.local/lib/python3.8/site-packages/google/oauth2/__init__.py:38: FutureWarning: You are using a Python version 3.8 past its end of life. Google will update google-auth with critical bug fixes on a best-effort basis, but not with any other fixes or features. Please upgrade your Python version, and then update google-auth.
+  warnings.warn(eol_message.format("3.8"), FutureWarning)
+/home/oo33/.local/lib/python3.8/site-packages/google/api_core/_python_version_support.py:246: FutureWarning: You are using a non-supported Python version (3.8.10). Google will not post any further updates to google.api_core supporting this Python version. Please upgrade to the latest Python version, or at least Python 3.10, and then update google.api_core.
+  warnings.warn(message, FutureWarning)
+/home/oo33/.local/lib/python3.8/site-packages/flask_limiter/extension.py:337: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+  warnings.warn(
+ * Restarting with stat
+/home/oo33/.local/lib/python3.8/site-packages/google/auth/__init__.py:52: FutureWarning: You are using a Python version 3.8 past its end of life. Google will update google-auth with critical bug fixes on a best-effort basis, but not with any other fixes or features. Please upgrade your Python version, and then update google-auth.
+  warnings.warn(eol_message.format("3.8"), FutureWarning)
+/home/oo33/.local/lib/python3.8/site-packages/google/oauth2/__init__.py:38: FutureWarning: You are using a Python version 3.8 past its end of life. Google will update google-auth with critical bug fixes on a best-effort basis, but not with any other fixes or features. Please upgrade your Python version, and then update google-auth.
+  warnings.warn(eol_message.format("3.8"), FutureWarning)
+/home/oo33/.local/lib/python3.8/site-packages/google/api_core/_python_version_support.py:246: FutureWarning: You are using a non-supported Python version (3.8.10). Google will not post any further updates to google.api_core supporting this Python version. Please upgrade to the latest Python version, or at least Python 3.10, and then update google.api_core.
+  warnings.warn(message, FutureWarning)
+/home/oo33/.local/lib/python3.8/site-packages/flask_limiter/extension.py:337: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+  warnings.warn(
+ * Debugger is active!
+ * Debugger PIN: 814-589-885
+(139310) wsgi starting up on http://0.0.0.0:5000
+(139310) accepted ('127.0.0.1', 39574)
+(139310) accepted ('127.0.0.1', 39584)
+[2026-02-18 11:00:18,314] INFO in app: Refreshing driver cache.
+127.0.0.1 - - [18/Feb/2026 11:00:18] "GET /orders/ORD6 HTTP/1.1" 200 30069 1.312503
+127.0.0.1 - - [18/Feb/2026 11:01:21] "GET /orders HTTP/1.1" 200 25737 0.816064
+(139310) accepted ('127.0.0.1', 35040)
+/home/oo33/.local/lib/python3.8/site-packages/google/cloud/firestore_v1/base_collection.py:316: UserWarning: Detected filter using positional arguments. Prefer using the 'filter' keyword argument instead.
+  return query.where(field_path, op_string, value)
+127.0.0.1 - - [18/Feb/2026 11:01:24] "GET / HTTP/1.1" 200 23965 1.198786
+127.0.0.1 - - [18/Feb/2026 11:01:28] "GET /orders HTTP/1.1" 200 25737 0.434189
+[2026-02-18 11:01:31,646] INFO in app: Refreshing driver cache.
+127.0.0.1 - - [18/Feb/2026 11:01:31] "GET /orders/ORD6 HTTP/1.1" 200 30069 0.413387
+[2026-02-18 11:01:33,664] INFO in app: 💾 Notification saved to Firestore for user orI6CDcLXHSfrZ5vkuwaSo2PktO2
+[2026-02-18 11:01:34,044] INFO in app: ✅ Notification sent to user orI6CDcLXHSfrZ5vkuwaSo2PktO2 for order ORD6: projects/frizzly-9a65f/messages/0:1771408893982116%28e4f5fc28e4f5fc
+[2026-02-18 11:01:34,045] INFO in app: Sent notification to user orI6CDcLXHSfrZ5vkuwaSo2PktO2 for order ORD6 status CONFIRMED
+127.0.0.1 - - [18/Feb/2026 11:01:34] "POST /orders/ORD6/update-status HTTP/1.1" 302 753 1.120200
+127.0.0.1 - - [18/Feb/2026 11:01:34] "GET /orders/ORD6 HTTP/1.1" 200 30696 0.279863
+[2026-02-18 11:01:43,616] INFO in app: 💾 Notification saved to Firestore for user orI6CDcLXHSfrZ5vkuwaSo2PktO2
+[2026-02-18 11:01:43,819] INFO in app: ✅ Notification sent to user orI6CDcLXHSfrZ5vkuwaSo2PktO2 for order ORD6: projects/frizzly-9a65f/messages/0:1771408903753279%28e4f5fc28e4f5fc
+[2026-02-18 11:01:43,820] INFO in app: Sent notification to user orI6CDcLXHSfrZ5vkuwaSo2PktO2 for order ORD6 status PREPARING_ORDER
+127.0.0.1 - - [18/Feb/2026 11:01:43] "POST /orders/ORD6/update-status HTTP/1.1" 302 761 0.918727
+127.0.0.1 - - [18/Feb/2026 11:01:44] "GET /orders/ORD6 HTTP/1.1" 200 30716 0.257235
+ * Detected change in '/home/oo33/AndroidStudioProjects/FRIZZLY/admin-dashboard/app.py', reloading
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1771409068.361819  139310 init.cc:232] grpc_wait_for_shutdown_with_timeout() timed out.
+ * Restarting with stat
+/home/oo33/.local/lib/python3.8/site-packages/google/auth/__init__.py:52: FutureWarning: You are using a Python version 3.8 past its end of life. Google will update google-auth with critical bug fixes on a best-effort basis, but not with any other fixes or features. Please upgrade your Python version, and then update google-auth.
+  warnings.warn(eol_message.format("3.8"), FutureWarning)
+/home/oo33/.local/lib/python3.8/site-packages/google/oauth2/__init__.py:38: FutureWarning: You are using a Python version 3.8 past its end of life. Google will update google-auth with critical bug fixes on a best-effort basis, but not with any other fixes or features. Please upgrade your Python version, and then update google-auth.
+  warnings.warn(eol_message.format("3.8"), FutureWarning)
+/home/oo33/.local/lib/python3.8/site-packages/google/api_core/_python_version_support.py:246: FutureWarning: You are using a non-supported Python version (3.8.10). Google will not post any further updates to google.api_core supporting this Python version. Please upgrade to the latest Python version, or at least Python 3.10, and then update google.api_core.
+  warnings.warn(message, FutureWarning)
+/home/oo33/.local/lib/python3.8/site-packages/flask_limiter/extension.py:337: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+  warnings.warn(
+ * Debugger is active!
+ * Debugger PIN: 814-589-885
+(139903) wsgi starting up on http://0.0.0.0:5000

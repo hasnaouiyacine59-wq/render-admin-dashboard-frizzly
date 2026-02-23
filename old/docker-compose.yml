@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    command: gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:5000 app:app
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+    environment:
+      FLASK_SECRET_KEY: your-flask-secret-key-here # CHANGE THIS IN PRODUCTION
+      FIREBASE_API_KEY: your-firebase-api-key-here # CHANGE THIS IN PRODUCTION

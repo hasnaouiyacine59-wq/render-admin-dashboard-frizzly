@@ -1,0 +1,10 @@
+2026-02-23 23:39:22,481 - app_api - ERROR - API request failed: HTTPSConnectionPool(host='apifrizzly-production.up.railway.app', port=443): Read timed out. (read timeout=10)
+2026-02-23 23:39:33,295 - app_api - ERROR - API request failed: HTTPSConnectionPool(host='apifrizzly-production.up.railway.app', port=443): Read timed out. (read timeout=10)
+2026-02-23 23:39:43,648 - app_api - ERROR - API request failed: HTTPSConnectionPool(host='apifrizzly-production.up.railway.app', port=443): Read timed out. (read timeout=10)
+2026-02-23 23:40:21,922 - app_api - INFO - Refreshing driver cache from API.
+2026-02-23 23:40:47,711 - app_api - ERROR - API request failed: HTTPSConnectionPool(host='apifrizzly-production.up.railway.app', port=443): Read timed out. (read timeout=10)
+2026-02-23 23:41:03,907 - app_api - ERROR - API request failed: HTTPSConnectionPool(host='apifrizzly-production.up.railway.app', port=443): Read timed out. (read timeout=10)
+2026-02-23 23:46:16,776 - app_api - ERROR - API request failed: HTTPSConnectionPool(host='apifrizzly-production.up.railway.app', port=443): Read timed out. (read timeout=30)
+2026-02-23 23:47:15,631 - app_api - ERROR - API request failed: HTTPSConnectionPool(host='apifrizzly-production.up.railway.app', port=443): Read timed out. (read timeout=30)
+2026-02-23 23:47:46,215 - app_api - ERROR - API request failed: HTTPSConnectionPool(host='apifrizzly-production.up.railway.app', port=443): Read timed out. (read timeout=30)
+2026-02-23 23:49:03,223 - app_api - ERROR - API request failed: HTTPSConnectionPool(host='apifrizzly-production.up.railway.app', port=443): Read timed out. (read timeout=30)
