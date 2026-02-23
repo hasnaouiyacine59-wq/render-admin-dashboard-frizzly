@@ -304,6 +304,53 @@ def users():
         app.logger.error(f"Users error: {e}")
         return render_template('users.html', users=[])
 
+# ============= DELIVERY & DRIVERS =============
+
+@app.route('/delivery-logistics')
+@login_required
+def delivery_logistics():
+    try:
+        orders = []
+        for doc in db.collection('orders').where('status', 'in', ['ON_WAY', 'OUT_FOR_DELIVERY']).stream():
+            data = doc.to_dict()
+            data['id'] = doc.id
+            orders.append(data)
+        
+        return render_template('delivery_logistics.html', orders=orders)
+    except Exception as e:
+        app.logger.error(f"Delivery logistics error: {e}")
+        return render_template('delivery_logistics.html', orders=[])
+
+@app.route('/drivers')
+@login_required
+def drivers():
+    try:
+        drivers_list = []
+        for doc in db.collection('drivers').stream():
+            data = doc.to_dict()
+            data['id'] = doc.id
+            drivers_list.append(data)
+        
+        return render_template('drivers.html', drivers=drivers_list)
+    except Exception as e:
+        app.logger.error(f"Drivers error: {e}")
+        return render_template('drivers.html', drivers=[])
+
+@app.route('/stock-management')
+@login_required
+def stock_management():
+    try:
+        products = []
+        for doc in db.collection('products').stream():
+            data = doc.to_dict()
+            data['id'] = doc.id
+            products.append(data)
+        
+        return render_template('stock_management.html', products=products)
+    except Exception as e:
+        app.logger.error(f"Stock management error: {e}")
+        return render_template('stock_management.html', products=[])
+
 # ============= NOTIFICATIONS =============
 
 def send_notification(user_id, title, body):
