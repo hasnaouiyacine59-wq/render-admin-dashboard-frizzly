@@ -25,7 +25,7 @@ class FrizzlyAPIClient:
         headers = self._get_headers()
         
         try:
-            response = self.session.request(method, url, headers=headers, timeout=10, **kwargs)
+            response = self.session.request(method, url, headers=headers, timeout=30, **kwargs)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:

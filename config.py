@@ -1,16 +1,12 @@
-# Configuration for Admin Dashboard
-
-# API Configuration
-# Local development:
-# API_BASE_URL = "http://localhost:5000"
-
-# Production (Railway):
-API_BASE_URL = "https://apifrizzly-production.up.railway.app"
+# Configuration for Admin Dashboard - Direct Firebase
 
 # Flask Configuration
 SECRET_KEY = "your-secret-key-change-in-production"
 
+# Firebase Service Account
+SERVICE_ACCOUNT_PATH = "/etc/secrets/serviceAccountKey.json"
+
 # Session Configuration
-SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
+SESSION_COOKIE_SECURE = True  # HTTPS on Render
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
