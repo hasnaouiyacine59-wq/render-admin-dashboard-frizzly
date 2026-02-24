@@ -242,10 +242,12 @@ def products():
             data['id'] = doc.id
             products_list.append(data)
         
-        return render_template('products.html', products=products_list)
+        pagination = {'total_pages': 1, 'has_prev': False, 'has_next': False, 'prev_num': 1, 'next_num': 1}
+        return render_template('products.html', products=products_list, pagination=pagination)
     except Exception as e:
         app.logger.error(f"Products error: {e}")
-        return render_template('products.html', products=[])
+        pagination = {'total_pages': 1, 'has_prev': False, 'has_next': False, 'prev_num': 1, 'next_num': 1}
+        return render_template('products.html', products=[], pagination=pagination)
 
 @app.route('/products/add', methods=['GET', 'POST'])
 @login_required
@@ -333,10 +335,29 @@ def users():
             data['id'] = doc.id
             users_list.append(data)
         
-        return render_template('users.html', users=users_list)
+        pagination = {'total_pages': 1, 'has_prev': False, 'has_next': False, 'prev_num': 1, 'next_num': 1}
+        return render_template('users.html', users=users_list, pagination=pagination)
     except Exception as e:
         app.logger.error(f"Users error: {e}")
-        return render_template('users.html', users=[])
+        pagination = {'total_pages': 1, 'has_prev': False, 'has_next': False, 'prev_num': 1, 'next_num': 1}
+        return render_template('users.html', users=[], pagination=pagination)
+
+@app.route('/users/<user_id>')
+@login_required
+def user_detail(user_id):
+    try:
+        doc = db.collection('users').document(user_id).get()
+        if not doc.exists:
+            flash('User not found', 'error')
+            return redirect(url_for('users'))
+        
+        user = doc.to_dict()
+        user['id'] = doc.id
+        return render_template('user_detail.html', user=user)
+    except Exception as e:
+        app.logger.error(f"User detail error: {e}")
+        flash('Error loading user', 'error')
+        return redirect(url_for('users'))
 
 # ============= DELIVERY & DRIVERS =============
 
