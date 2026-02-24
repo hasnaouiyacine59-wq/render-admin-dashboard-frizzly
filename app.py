@@ -83,6 +83,25 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# ============= CONTEXT PROCESSOR =============
+
+@app.context_processor
+def inject_stats():
+    """Inject order stats into all templates"""
+    if current_user.is_authenticated:
+        try:
+            orders = list(db.collection('orders').stream())
+            stats = {
+                'total_orders': len(orders),
+                'pending_orders': sum(1 for o in orders if o.to_dict().get('status') == 'PENDING'),
+                'in_progress_orders': sum(1 for o in orders if o.to_dict().get('status') in ['CONFIRMED', 'PREPARING_ORDER', 'ON_WAY', 'OUT_FOR_DELIVERY']),
+                'delivered_orders': sum(1 for o in orders if o.to_dict().get('status') == 'DELIVERED')
+            }
+            return {'stats': stats}
+        except:
+            pass
+    return {'stats': {'total_orders': 0, 'pending_orders': 0, 'in_progress_orders': 0, 'delivered_orders': 0}}
+
 # ============= AUTHENTICATION =============
 
 @app.route('/login', methods=['GET', 'POST'])

@@ -206,19 +206,19 @@
                 <div class="d-none d-lg-flex align-items-center gap-3 ms-auto me-3">
                     <div class="position-relative">
                         <i class="bi bi-cart-check fs-4" style="color: #667eea;"></i>
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary" style="font-size: 10px;">{{ stats.total_orders if stats else 0 }}</span>
+                        <span id="totalOrdersBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary" style="font-size: 10px;">{{ stats.total_orders if stats else 0 }}</span>
                     </div>
                     <div class="position-relative">
                         <i class="bi bi-clock-history fs-4" style="color: #4facfe;"></i>
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-info" style="font-size: 10px;">{{ stats.pending_orders if stats else 0 }}</span>
+                        <span id="pendingOrdersBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-info" style="font-size: 10px;">{{ stats.pending_orders if stats else 0 }}</span>
                     </div>
                     <div class="position-relative">
                         <i class="bi bi-truck fs-4" style="color: #f5576c;"></i>
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning" style="font-size: 10px;">{{ stats.in_progress_orders if stats else 0 }}</span>
+                        <span id="inProgressOrdersBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning" style="font-size: 10px;">{{ stats.in_progress_orders if stats else 0 }}</span>
                     </div>
                     <div class="position-relative">
                         <i class="bi bi-check-circle fs-4" style="color: #43e97b;"></i>
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-success" style="font-size: 10px;">{{ stats.delivered_orders if stats else 0 }}</span>
+                        <span id="deliveredOrdersBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-success" style="font-size: 10px;">{{ stats.delivered_orders if stats else 0 }}</span>
                     </div>
                 </div>
                 
@@ -469,6 +469,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 addNotification(order);
                 showNotification(1);
                 playNotificationSound();
+                updateOrderStats(); // Update navbar badges
             }
         });
         
@@ -479,6 +480,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('notificationBody').textContent = 
                 `Order #${data.orderId.slice(-8)} updated to ${data.status}`;
             toast.show();
+            updateOrderStats(); // Update navbar badges
             
             if (window.location.pathname.includes('/orders')) {
                 setTimeout(() => location.reload(), 1000);
@@ -510,6 +512,24 @@ document.addEventListener('DOMContentLoaded', function() {
     window.hideLoading = function() {
         const overlay = document.getElementById('loadingOverlay');
         overlay.classList.remove('active');
+    };
+
+    // Update order stats badges
+    window.updateOrderStats = function() {
+        fetch('/api/dashboard-stats')
+            .then(r => r.json())
+            .then(data => {
+                const totalBadge = document.getElementById('totalOrdersBadge');
+                const pendingBadge = document.getElementById('pendingOrdersBadge');
+                const inProgressBadge = document.getElementById('inProgressOrdersBadge');
+                const deliveredBadge = document.getElementById('deliveredOrdersBadge');
+                
+                if (totalBadge) totalBadge.textContent = data.total_orders || 0;
+                if (pendingBadge) pendingBadge.textContent = data.pending_orders || 0;
+                if (inProgressBadge) inProgressBadge.textContent = data.in_progress_orders || 0;
+                if (deliveredBadge) deliveredBadge.textContent = data.delivered_orders || 0;
+            })
+            .catch(e => console.error('Failed to update stats:', e));
     };
 
     // Auto-show loading on form submit
