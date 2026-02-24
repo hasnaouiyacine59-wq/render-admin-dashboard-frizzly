@@ -441,7 +441,17 @@ def add_product():
             app.logger.error(f"Add product error: {e}")
             flash('Failed to add product', 'error')
     
-    return render_template('add_product.html')
+    # Fetch categories
+    categories = []
+    try:
+        for cat_doc in db.collection('categories').stream():
+            cat_data = cat_doc.to_dict()
+            cat_data['id'] = cat_doc.id
+            categories.append(cat_data)
+    except Exception as e:
+        app.logger.error(f"Load categories error: {e}")
+    
+    return render_template('add_product.html', categories=categories)
 
 @app.route('/products/<product_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -474,7 +484,15 @@ def edit_product(product_id):
         
         product = doc.to_dict()
         product['id'] = doc.id
-        return render_template('edit_product.html', product=product)
+        
+        # Fetch categories
+        categories = []
+        for cat_doc in db.collection('categories').stream():
+            cat_data = cat_doc.to_dict()
+            cat_data['id'] = cat_doc.id
+            categories.append(cat_data)
+        
+        return render_template('edit_product.html', product=product, categories=categories)
     except Exception as e:
         app.logger.error(f"Load product error: {e}")
         flash('Error loading product', 'error')
