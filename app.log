@@ -1,33 +1,24 @@
-2026-02-23 23:39:22,481 - app_api - ERROR - API request failed: HTTPSConnectionPool(host='apifrizzly-production.up.railway.app', port=443): Read timed out. (read timeout=10)
-2026-02-23 23:39:33,295 - app_api - ERROR - API request failed: HTTPSConnectionPool(host='apifrizzly-production.up.railway.app', port=443): Read timed out. (read timeout=10)
-2026-02-23 23:39:43,648 - app_api - ERROR - API request failed: HTTPSConnectionPool(host='apifrizzly-production.up.railway.app', port=443): Read timed out. (read timeout=10)
-2026-02-23 23:40:21,922 - app_api - INFO - Refreshing driver cache from API.
-2026-02-23 23:40:47,711 - app_api - ERROR - API request failed: HTTPSConnectionPool(host='apifrizzly-production.up.railway.app', port=443): Read timed out. (read timeout=10)
-2026-02-23 23:41:03,907 - app_api - ERROR - API request failed: HTTPSConnectionPool(host='apifrizzly-production.up.railway.app', port=443): Read timed out. (read timeout=10)
-2026-02-23 23:46:16,776 - app_api - ERROR - API request failed: HTTPSConnectionPool(host='apifrizzly-production.up.railway.app', port=443): Read timed out. (read timeout=30)
-2026-02-23 23:47:15,631 - app_api - ERROR - API request failed: HTTPSConnectionPool(host='apifrizzly-production.up.railway.app', port=443): Read timed out. (read timeout=30)
-2026-02-23 23:47:46,215 - app_api - ERROR - API request failed: HTTPSConnectionPool(host='apifrizzly-production.up.railway.app', port=443): Read timed out. (read timeout=30)
-2026-02-23 23:49:03,223 - app_api - ERROR - API request failed: HTTPSConnectionPool(host='apifrizzly-production.up.railway.app', port=443): Read timed out. (read timeout=30)
-Dashboard error: 'dict object' has no attribute 'low_stock_products'
-Exception on / [GET]
+Exception on /delivery-logistics [GET]
 Traceback (most recent call last):
-  File "app.py", line 124, in dashboard
-    return render_template('dashboard.html', stats=stats, recent_orders=orders_data)
-  File "/home/oo33/.local/lib/python3.8/site-packages/flask/templating.py", line 152, in render_template
-    return _render(app, template, context)
-  File "/home/oo33/.local/lib/python3.8/site-packages/flask/templating.py", line 133, in _render
-    rv = template.render(context)
-  File "/home/oo33/.local/lib/python3.8/site-packages/jinja2/environment.py", line 1295, in render
-    self.environment.handle_exception()
+  File "app.py", line 374, in delivery_logistics
+    return render_template('delivery.html', orders=orders)
+  File "/home/oo33/.local/lib/python3.8/site-packages/flask/templating.py", line 151, in render_template
+    template = app.jinja_env.get_or_select_template(template_name_or_list)
+  File "/home/oo33/.local/lib/python3.8/site-packages/jinja2/environment.py", line 1087, in get_or_select_template
+    return self.get_template(template_name_or_list, parent, globals)
+  File "/home/oo33/.local/lib/python3.8/site-packages/jinja2/environment.py", line 1016, in get_template
+    return self._load_template(name, globals)
+  File "/home/oo33/.local/lib/python3.8/site-packages/jinja2/environment.py", line 975, in _load_template
+    template = self.loader.load(self, name, self.make_globals(globals))
+  File "/home/oo33/.local/lib/python3.8/site-packages/jinja2/loaders.py", line 138, in load
+    code = environment.compile(source, name, filename)
+  File "/home/oo33/.local/lib/python3.8/site-packages/jinja2/environment.py", line 771, in compile
+    self.handle_exception(source=source_hint)
   File "/home/oo33/.local/lib/python3.8/site-packages/jinja2/environment.py", line 942, in handle_exception
     raise rewrite_traceback_stack(source=source)
-  File "/home/oo33/AndroidStudioProjects/render-admin-dashboard-frizzly/templates/dashboard.html", line 1, in top-level template code
-    {% extends "base.html" %}
-  File "/home/oo33/AndroidStudioProjects/render-admin-dashboard-frizzly/templates/base.html", line 222, in top-level template code
-    {% block content %}{% endblock %}
-  File "/home/oo33/AndroidStudioProjects/render-admin-dashboard-frizzly/templates/dashboard.html", line 8, in block 'content'
-    {% if stats.low_stock_products > 0 %}
-jinja2.exceptions.UndefinedError: 'dict object' has no attribute 'low_stock_products'
+  File "/home/oo33/AndroidStudioProjects/render-admin-dashboard-frizzly/templates/delivery.html", line 28, in template
+    <p class="mb-0"><strong>Time:</strong> {{ order.timestamp | int | timestamp_to_date }}</p>
+jinja2.exceptions.TemplateAssertionError: No filter named 'timestamp_to_date'.
 
 During handling of the above exception, another exception occurred:
 
@@ -42,75 +33,22 @@ Traceback (most recent call last):
     return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
   File "/home/oo33/.local/lib/python3.8/site-packages/flask_login/utils.py", line 290, in decorated_view
     return current_app.ensure_sync(func)(*args, **kwargs)
-  File "app.py", line 127, in dashboard
-    return render_template('dashboard.html', stats={}, recent_orders=[])
-  File "/home/oo33/.local/lib/python3.8/site-packages/flask/templating.py", line 152, in render_template
-    return _render(app, template, context)
-  File "/home/oo33/.local/lib/python3.8/site-packages/flask/templating.py", line 133, in _render
-    rv = template.render(context)
-  File "/home/oo33/.local/lib/python3.8/site-packages/jinja2/environment.py", line 1295, in render
-    self.environment.handle_exception()
+  File "app.py", line 377, in delivery_logistics
+    return render_template('delivery.html', orders=[])
+  File "/home/oo33/.local/lib/python3.8/site-packages/flask/templating.py", line 151, in render_template
+    template = app.jinja_env.get_or_select_template(template_name_or_list)
+  File "/home/oo33/.local/lib/python3.8/site-packages/jinja2/environment.py", line 1087, in get_or_select_template
+    return self.get_template(template_name_or_list, parent, globals)
+  File "/home/oo33/.local/lib/python3.8/site-packages/jinja2/environment.py", line 1016, in get_template
+    return self._load_template(name, globals)
+  File "/home/oo33/.local/lib/python3.8/site-packages/jinja2/environment.py", line 975, in _load_template
+    template = self.loader.load(self, name, self.make_globals(globals))
+  File "/home/oo33/.local/lib/python3.8/site-packages/jinja2/loaders.py", line 138, in load
+    code = environment.compile(source, name, filename)
+  File "/home/oo33/.local/lib/python3.8/site-packages/jinja2/environment.py", line 771, in compile
+    self.handle_exception(source=source_hint)
   File "/home/oo33/.local/lib/python3.8/site-packages/jinja2/environment.py", line 942, in handle_exception
     raise rewrite_traceback_stack(source=source)
-  File "/home/oo33/AndroidStudioProjects/render-admin-dashboard-frizzly/templates/dashboard.html", line 1, in top-level template code
-    {% extends "base.html" %}
-  File "/home/oo33/AndroidStudioProjects/render-admin-dashboard-frizzly/templates/base.html", line 222, in top-level template code
-    {% block content %}{% endblock %}
-  File "/home/oo33/AndroidStudioProjects/render-admin-dashboard-frizzly/templates/dashboard.html", line 8, in block 'content'
-    {% if stats.low_stock_products > 0 %}
-jinja2.exceptions.UndefinedError: 'dict object' has no attribute 'low_stock_products'
-Dashboard error: 'dict object' has no attribute 'total_revenue'
-Exception on / [GET]
-Traceback (most recent call last):
-  File "app.py", line 126, in dashboard
-    return render_template('dashboard.html', stats=stats, recent_orders=orders_data)
-  File "/home/oo33/.local/lib/python3.8/site-packages/flask/templating.py", line 152, in render_template
-    return _render(app, template, context)
-  File "/home/oo33/.local/lib/python3.8/site-packages/flask/templating.py", line 133, in _render
-    rv = template.render(context)
-  File "/home/oo33/.local/lib/python3.8/site-packages/jinja2/environment.py", line 1295, in render
-    self.environment.handle_exception()
-  File "/home/oo33/.local/lib/python3.8/site-packages/jinja2/environment.py", line 942, in handle_exception
-    raise rewrite_traceback_stack(source=source)
-  File "/home/oo33/AndroidStudioProjects/render-admin-dashboard-frizzly/templates/dashboard.html", line 1, in top-level template code
-    {% extends "base.html" %}
-  File "/home/oo33/AndroidStudioProjects/render-admin-dashboard-frizzly/templates/base.html", line 222, in top-level template code
-    {% block content %}{% endblock %}
-  File "/home/oo33/AndroidStudioProjects/render-admin-dashboard-frizzly/templates/dashboard.html", line 37, in block 'content'
-    <h2 class="mb-0">${{ "%.2f"|format(stats.total_revenue) }}</h2>
-  File "/home/oo33/.local/lib/python3.8/site-packages/jinja2/filters.py", line 1043, in do_format
-    return soft_str(value) % (kwargs or args)
-jinja2.exceptions.UndefinedError: 'dict object' has no attribute 'total_revenue'
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "/home/oo33/.local/lib/python3.8/site-packages/flask/app.py", line 1455, in wsgi_app
-    response = self.full_dispatch_request()
-  File "/home/oo33/.local/lib/python3.8/site-packages/flask/app.py", line 869, in full_dispatch_request
-    rv = self.handle_user_exception(e)
-  File "/home/oo33/.local/lib/python3.8/site-packages/flask/app.py", line 867, in full_dispatch_request
-    rv = self.dispatch_request()
-  File "/home/oo33/.local/lib/python3.8/site-packages/flask/app.py", line 852, in dispatch_request
-    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
-  File "/home/oo33/.local/lib/python3.8/site-packages/flask_login/utils.py", line 290, in decorated_view
-    return current_app.ensure_sync(func)(*args, **kwargs)
-  File "app.py", line 129, in dashboard
-    return render_template('dashboard.html', stats={'total_orders': 0, 'pending_orders': 0, 'total_products': 0, 'total_users': 0, 'low_stock_products': 0}, recent_orders=[])
-  File "/home/oo33/.local/lib/python3.8/site-packages/flask/templating.py", line 152, in render_template
-    return _render(app, template, context)
-  File "/home/oo33/.local/lib/python3.8/site-packages/flask/templating.py", line 133, in _render
-    rv = template.render(context)
-  File "/home/oo33/.local/lib/python3.8/site-packages/jinja2/environment.py", line 1295, in render
-    self.environment.handle_exception()
-  File "/home/oo33/.local/lib/python3.8/site-packages/jinja2/environment.py", line 942, in handle_exception
-    raise rewrite_traceback_stack(source=source)
-  File "/home/oo33/AndroidStudioProjects/render-admin-dashboard-frizzly/templates/dashboard.html", line 1, in top-level template code
-    {% extends "base.html" %}
-  File "/home/oo33/AndroidStudioProjects/render-admin-dashboard-frizzly/templates/base.html", line 222, in top-level template code
-    {% block content %}{% endblock %}
-  File "/home/oo33/AndroidStudioProjects/render-admin-dashboard-frizzly/templates/dashboard.html", line 37, in block 'content'
-    <h2 class="mb-0">${{ "%.2f"|format(stats.total_revenue) }}</h2>
-  File "/home/oo33/.local/lib/python3.8/site-packages/jinja2/filters.py", line 1043, in do_format
-    return soft_str(value) % (kwargs or args)
-jinja2.exceptions.UndefinedError: 'dict object' has no attribute 'total_revenue'
+  File "/home/oo33/AndroidStudioProjects/render-admin-dashboard-frizzly/templates/delivery.html", line 28, in template
+    <p class="mb-0"><strong>Time:</strong> {{ order.timestamp | int | timestamp_to_date }}</p>
+jinja2.exceptions.TemplateAssertionError: No filter named 'timestamp_to_date'.
