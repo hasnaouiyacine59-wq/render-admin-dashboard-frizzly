@@ -626,17 +626,42 @@ def update_stock(product_id):
 @login_required
 def revenue():
     try:
-        orders = [doc.to_dict() for doc in db.collection('orders').stream()]
+        orders = [{'id': d.id, **d.to_dict()} for d in db.collection('orders').stream()]
         total_revenue = sum(o.get('totalAmount', 0) for o in orders if o.get('status') == 'DELIVERED')
-        return render_template('revenue.html', total_revenue=total_revenue, orders=orders)
+        
+        data = {
+            'total_revenue': total_revenue,
+            'orders': orders,
+            'delivered_count': len([o for o in orders if o.get('status') == 'DELIVERED'])
+        }
+        
+        return render_template('revenue.html', data=data, orders=orders)
     except Exception as e:
         app.logger.error(f"Revenue error: {e}")
-        return render_template('revenue.html', total_revenue=0, orders=[])
+        return render_template('revenue.html', data={'total_revenue': 0, 'orders': [], 'delivered_count': 0}, orders=[])
 
 @app.route('/analytics')
 @login_required
 def analytics():
-    return render_template('analytics.html')
+    try:
+        orders = [{'id': d.id, **d.to_dict()} for d in db.collection('orders').stream()]
+        
+        # Calculate analytics
+        status_counts = {}
+        for order in orders:
+            status = order.get('status', 'UNKNOWN')
+            status_counts[status] = status_counts.get(status, 0) + 1
+        
+        data = {
+            'status_counts': status_counts,
+            'total_orders': len(orders),
+            'total_revenue': sum(o.get('totalAmount', 0) for o in orders if o.get('status') == 'DELIVERED')
+        }
+        
+        return render_template('analytics.html', data=data)
+    except Exception as e:
+        app.logger.error(f"Analytics error: {e}")
+        return render_template('analytics.html', data={'status_counts': {}, 'total_orders': 0, 'total_revenue': 0})
 
 @app.route('/notifications')
 @login_required
