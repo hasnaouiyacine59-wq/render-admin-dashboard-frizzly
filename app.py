@@ -142,6 +142,8 @@ def stream_orders():
     """Server-Sent Events for real-time order updates"""
     import queue
     
+    app.logger.info(f"SSE: New connection from user {current_user.id}")
+    
     message_queue = queue.Queue(maxsize=100)
     first_snapshot = True
     
@@ -149,12 +151,16 @@ def stream_orders():
         """Firestore snapshot callback"""
         nonlocal first_snapshot
         
+        app.logger.info(f"SSE: Snapshot received with {len(changes)} changes, first={first_snapshot}")
+        
         # Skip initial snapshot (all existing orders)
         if first_snapshot:
             first_snapshot = False
+            app.logger.info("SSE: Skipping initial snapshot")
             return
         
         for change in changes:
+            app.logger.info(f"SSE: Change type={change.type.name}, doc={change.document.id}")
             if change.type.name in ['ADDED', 'MODIFIED']:
                 doc = change.document
                 data = doc.to_dict()
@@ -169,15 +175,18 @@ def stream_orders():
                 }
                 try:
                     message_queue.put_nowait(event_data)
+                    app.logger.info(f"SSE: Queued event for order {event_data['orderId']}")
                 except queue.Full:
-                    pass
+                    app.logger.warning("SSE: Queue full, dropping event")
     
     # Start Firestore listener
+    app.logger.info("SSE: Starting Firestore listener")
     col_query = db.collection('orders').limit(20)
     doc_watch = col_query.on_snapshot(on_snapshot)
     
     def generate():
         try:
+            app.logger.info("SSE: Sending connected message")
             yield f"data: {json.dumps({'type': 'connected'})}\n\n"
             
             timeout_count = 0
@@ -187,12 +196,16 @@ def stream_orders():
                 try:
                     event_data = message_queue.get(timeout=30)
                     event_type = event_data.pop('type', 'message')
+                    app.logger.info(f"SSE: Sending {event_type} event")
                     yield f"event: {event_type}\ndata: {json.dumps(event_data)}\n\n"
                     timeout_count = 0
                 except queue.Empty:
                     yield f": heartbeat\n\n"
                     timeout_count += 1
+        except GeneratorExit:
+            app.logger.info("SSE: Client disconnected")
         finally:
+            app.logger.info("SSE: Unsubscribing from Firestore")
             doc_watch.unsubscribe()
     
     response = Response(generate(), mimetype='text/event-stream')
@@ -731,6 +744,12 @@ def activity_logs():
 @login_required
 def settings():
     return render_template('settings.html')
+
+@app.route('/sse-test')
+@login_required
+def sse_test():
+    """Test page for SSE connection"""
+    return render_template('sse_test.html')
 
 @app.route('/settings/change-password', methods=['POST'])
 @login_required
