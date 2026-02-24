@@ -143,9 +143,17 @@ def stream_orders():
     import queue
     
     message_queue = queue.Queue(maxsize=100)
+    first_snapshot = True
     
     def on_snapshot(col_snapshot, changes, read_time):
         """Firestore snapshot callback"""
+        nonlocal first_snapshot
+        
+        # Skip initial snapshot (all existing orders)
+        if first_snapshot:
+            first_snapshot = False
+            return
+        
         for change in changes:
             if change.type.name in ['ADDED', 'MODIFIED']:
                 doc = change.document
