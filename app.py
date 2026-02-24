@@ -115,6 +115,11 @@ def logout():
 
 # ============= FCM TOKEN =============
 
+@app.route('/firebase-messaging-sw.js')
+def firebase_messaging_sw():
+    """Serve Firebase messaging service worker from root"""
+    return app.send_static_file('firebase-messaging-sw.js')
+
 @app.route('/api/save-fcm-token', methods=['POST'])
 @login_required
 def save_fcm_token():

@@ -42,6 +42,7 @@ onMessage(messaging, (payload) => {
 
 // Initialize on page load
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/static/firebase-messaging-sw.js')
-    .then(() => initFCM());
+  navigator.serviceWorker.register('/firebase-messaging-sw.js')
+    .then(() => initFCM())
+    .catch(err => console.error('❌ Service worker registration failed:', err));
 }
