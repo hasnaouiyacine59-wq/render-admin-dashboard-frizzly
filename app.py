@@ -100,6 +100,86 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
+# ============= FCM TOKEN =============
+
+@app.route('/api/save-fcm-token', methods=['POST'])
+@login_required
+def save_fcm_token():
+    """Save FCM token for admin push notifications"""
+    try:
+        data = request.get_json()
+        token = data.get('token')
+        
+        if token:
+            db.collection('admins').document(current_user.id).update({
+                'fcmToken': token,
+                'fcmTokenUpdated': firestore.SERVER_TIMESTAMP
+            })
+            return jsonify({'success': True})
+        
+        return jsonify({'success': False, 'error': 'No token provided'}), 400
+    except Exception as e:
+        app.logger.error(f"Save FCM token error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# ============= SSE FOR REAL-TIME ORDERS =============
+
+@app.route('/api/stream-orders')
+@login_required
+def stream_orders():
+    """Server-Sent Events for real-time order updates"""
+    import queue
+    
+    message_queue = queue.Queue(maxsize=100)
+    
+    def on_snapshot(col_snapshot, changes, read_time):
+        """Firestore snapshot callback"""
+        for change in changes:
+            if change.type.name in ['ADDED', 'MODIFIED']:
+                doc = change.document
+                data = doc.to_dict()
+                event_data = {
+                    'id': doc.id,
+                    'orderId': data.get('orderId', doc.id),
+                    'totalAmount': data.get('totalAmount', 0),
+                    'status': data.get('status', 'PENDING'),
+                    'timestamp': data.get('timestamp', 0),
+                    'customerName': data.get('customerName', 'Unknown'),
+                    'type': 'new_order' if change.type.name == 'ADDED' else 'order_update'
+                }
+                try:
+                    message_queue.put_nowait(event_data)
+                except queue.Full:
+                    pass
+    
+    # Start Firestore listener
+    col_query = db.collection('orders').limit(20)
+    doc_watch = col_query.on_snapshot(on_snapshot)
+    
+    def generate():
+        try:
+            yield f"data: {json.dumps({'type': 'connected'})}\n\n"
+            
+            timeout_count = 0
+            max_timeouts = 120  # 60 minutes (120 * 30s)
+            
+            while timeout_count < max_timeouts:
+                try:
+                    event_data = message_queue.get(timeout=30)
+                    event_type = event_data.pop('type', 'message')
+                    yield f"event: {event_type}\ndata: {json.dumps(event_data)}\n\n"
+                    timeout_count = 0
+                except queue.Empty:
+                    yield f": heartbeat\n\n"
+                    timeout_count += 1
+        finally:
+            doc_watch.unsubscribe()
+    
+    response = Response(generate(), mimetype='text/event-stream')
+    response.headers['Cache-Control'] = 'no-cache'
+    response.headers['X-Accel-Buffering'] = 'no'
+    return response
+
 # ============= DASHBOARD =============
 
 @app.route('/')

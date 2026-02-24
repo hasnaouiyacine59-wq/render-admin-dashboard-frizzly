@@ -115,4 +115,98 @@
         </table>
     </div>
 </div>
+
+<script>
+// Real-time order notifications via SSE
+let eventSource = null;
+
+function connectSSE() {
+    if (eventSource) {
+        eventSource.close();
+    }
+    
+    eventSource = new EventSource('/api/stream-orders');
+    
+    eventSource.onopen = function() {
+        console.log('✅ SSE Connected');
+    };
+    
+    eventSource.addEventListener('new_order', function(e) {
+        const order = JSON.parse(e.data);
+        console.log('🔔 New order:', order);
+        
+        // Show notification
+        showNotification('New Order!', `Order #${order.orderId.slice(-8)} - $${order.totalAmount.toFixed(2)}`);
+        
+        // Play sound
+        playNotificationSound();
+        
+        // Reload page to show new order
+        setTimeout(() => location.reload(), 2000);
+    });
+    
+    eventSource.addEventListener('order_update', function(e) {
+        const order = JSON.parse(e.data);
+        console.log('📝 Order updated:', order);
+        
+        // Show notification
+        showNotification('Order Updated', `Order #${order.orderId.slice(-8)} - ${order.status}`);
+    });
+    
+    eventSource.onerror = function(e) {
+        console.error('❌ SSE Error:', e);
+        eventSource.close();
+        
+        // Reconnect after 5 seconds
+        setTimeout(connectSSE, 5000);
+    };
+}
+
+function showNotification(title, message) {
+    // Browser notification
+    if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(title, {
+            body: message,
+            icon: '/static/logo.png',
+            badge: '/static/badge.png'
+        });
+    }
+    
+    // Toast notification (Bootstrap)
+    const toast = document.createElement('div');
+    toast.className = 'toast position-fixed top-0 end-0 m-3';
+    toast.setAttribute('role', 'alert');
+    toast.innerHTML = `
+        <div class="toast-header bg-success text-white">
+            <strong class="me-auto">${title}</strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body">${message}</div>
+    `;
+    document.body.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+    setTimeout(() => toast.remove(), 5000);
+}
+
+function playNotificationSound() {
+    const audio = new Audio('/static/notification.mp3');
+    audio.play().catch(e => console.log('Sound play failed:', e));
+}
+
+// Request notification permission
+if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+}
+
+// Connect on page load
+connectSSE();
+
+// Reconnect on visibility change
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden && (!eventSource || eventSource.readyState === EventSource.CLOSED)) {
+        connectSSE();
+    }
+});
+</script>
 {% endblock %}
