@@ -459,6 +459,10 @@ document.addEventListener('DOMContentLoaded', function() {
         connectSSE();
     });
 </script>
+
+<!-- Firebase Cloud Messaging -->
+<script type="module" src="{{ url_for('static', filename='fcm-init.js') }}"></script>
+
 {% endblock %}
 </body>
 </html>
