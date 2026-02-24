@@ -413,6 +413,81 @@ def add_driver():
     
     return render_template('driver_form.html', driver=None)
 
+@app.route('/drivers/<driver_id>')
+@login_required
+def driver_detail(driver_id):
+    try:
+        doc = db.collection('drivers').document(driver_id).get()
+        if not doc.exists:
+            flash('Driver not found', 'error')
+            return redirect(url_for('drivers'))
+        driver = doc.to_dict()
+        driver['id'] = doc.id
+        return render_template('driver_detail.html', driver=driver)
+    except Exception as e:
+        app.logger.error(f"Driver detail error: {e}")
+        flash('Error loading driver', 'error')
+        return redirect(url_for('drivers'))
+
+@app.route('/drivers/<driver_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_driver(driver_id):
+    if request.method == 'POST':
+        try:
+            driver_data = {
+                'name': request.form.get('name'),
+                'phone': request.form.get('phone'),
+                'email': request.form.get('email'),
+                'vehicleType': request.form.get('vehicleType'),
+                'status': request.form.get('status'),
+                'updatedAt': firestore.SERVER_TIMESTAMP
+            }
+            db.collection('drivers').document(driver_id).update(driver_data)
+            flash('Driver updated successfully', 'success')
+            return redirect(url_for('drivers'))
+        except Exception as e:
+            app.logger.error(f"Edit driver error: {e}")
+            flash('Failed to update driver', 'error')
+    
+    try:
+        doc = db.collection('drivers').document(driver_id).get()
+        if not doc.exists:
+            flash('Driver not found', 'error')
+            return redirect(url_for('drivers'))
+        driver = doc.to_dict()
+        driver['id'] = doc.id
+        return render_template('driver_form.html', driver=driver)
+    except Exception as e:
+        app.logger.error(f"Load driver error: {e}")
+        flash('Error loading driver', 'error')
+        return redirect(url_for('drivers'))
+
+@app.route('/drivers/<driver_id>/delete', methods=['POST'])
+@login_required
+def delete_driver(driver_id):
+    try:
+        db.collection('drivers').document(driver_id).delete()
+        flash('Driver deleted successfully', 'success')
+    except Exception as e:
+        app.logger.error(f"Delete driver error: {e}")
+        flash('Failed to delete driver', 'error')
+    return redirect(url_for('drivers'))
+
+@app.route('/orders/<order_id>/assign-driver', methods=['POST'])
+@login_required
+def assign_driver(order_id):
+    try:
+        driver_id = request.form.get('driver_id')
+        db.collection('orders').document(order_id).update({
+            'driverId': driver_id,
+            'updatedAt': firestore.SERVER_TIMESTAMP
+        })
+        flash('Driver assigned successfully', 'success')
+    except Exception as e:
+        app.logger.error(f"Assign driver error: {e}")
+        flash('Failed to assign driver', 'error')
+    return redirect(url_for('order_detail', order_id=order_id))
+
 @app.route('/stock-management')
 @login_required
 def stock_management():
@@ -427,6 +502,21 @@ def stock_management():
     except Exception as e:
         app.logger.error(f"Stock management error: {e}")
         return render_template('stock_management.html', products=[])
+
+@app.route('/products/<product_id>/update-stock', methods=['POST'])
+@login_required
+def update_stock(product_id):
+    try:
+        new_stock = int(request.form.get('stock', 0))
+        db.collection('products').document(product_id).update({
+            'stock': new_stock,
+            'updatedAt': firestore.SERVER_TIMESTAMP
+        })
+        flash('Stock updated successfully', 'success')
+    except Exception as e:
+        app.logger.error(f"Update stock error: {e}")
+        flash('Failed to update stock', 'error')
+    return redirect(url_for('stock_management'))
 
 # ============= ANALYTICS & REPORTS =============
 
@@ -450,6 +540,20 @@ def analytics():
 @login_required
 def notifications():
     return render_template('notifications.html')
+
+@app.route('/notifications/test', methods=['POST'])
+@login_required
+def send_test_notification():
+    try:
+        user_id = request.form.get('user_id')
+        title = request.form.get('title', 'Test Notification')
+        body = request.form.get('body', 'This is a test notification')
+        send_notification(user_id, title, body)
+        flash('Test notification sent', 'success')
+    except Exception as e:
+        app.logger.error(f"Test notification error: {e}")
+        flash('Failed to send test notification', 'error')
+    return redirect(url_for('notifications'))
 
 @app.route('/activity-logs')
 @login_required
