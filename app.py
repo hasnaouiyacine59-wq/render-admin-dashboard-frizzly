@@ -180,9 +180,9 @@ def stream_orders():
                 except queue.Full:
                     app.logger.warning("SSE: Queue full, dropping event")
     
-    # Start Firestore listener
+    # Start Firestore listener - order by timestamp to catch new orders
     app.logger.info("SSE: Starting Firestore listener")
-    col_query = db.collection('orders').limit(20)
+    col_query = db.collection('orders').order_by('timestamp', direction=firestore.Query.DESCENDING).limit(50)
     doc_watch = col_query.on_snapshot(on_snapshot)
     
     def generate():
