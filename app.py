@@ -10,6 +10,7 @@ from firebase_admin import credentials, firestore, messaging
 from datetime import datetime
 import os
 import json
+import time
 from functools import wraps
 import logging
 from logging.handlers import RotatingFileHandler
@@ -713,8 +714,14 @@ def send_test_notification():
         user_doc = db.collection('users').document(user_id).get()
         if user_doc.exists and user_doc.to_dict().get('fcmToken'):
             fcm_token = user_doc.to_dict()['fcmToken']
+            # Use data-only message to trigger onMessageReceived in background
             message = messaging.Message(
-                notification=messaging.Notification(title=title, body=body),
+                data={
+                    'title': title,
+                    'body': body,
+                    'type': 'test',
+                    'timestamp': str(int(time.time() * 1000))
+                },
                 token=fcm_token
             )
             messaging.send(message)
@@ -804,8 +811,14 @@ def send_notification(user_id, title, body):
         if user_doc.exists:
             fcm_token = user_doc.to_dict().get('fcmToken')
             if fcm_token:
+                # Use data-only message to trigger onMessageReceived in background
                 message = messaging.Message(
-                    notification=messaging.Notification(title=title, body=body),
+                    data={
+                        'title': title,
+                        'body': body,
+                        'type': 'order',
+                        'timestamp': str(int(time.time() * 1000))
+                    },
                     token=fcm_token
                 )
                 messaging.send(message)
