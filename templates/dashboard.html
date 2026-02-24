@@ -135,6 +135,12 @@ function connectSSE() {
         const order = JSON.parse(e.data);
         console.log('🔔 New order:', order);
         
+        // Update notification badge
+        updateNotificationBadge(1);
+        
+        // Add to notification list
+        addNotificationToList('New Order!', `Order #${order.orderId.slice(-8)} - $${order.totalAmount.toFixed(2)}`, 'success');
+        
         // Show notification
         showNotification('New Order!', `Order #${order.orderId.slice(-8)} - $${order.totalAmount.toFixed(2)}`);
         
@@ -148,6 +154,12 @@ function connectSSE() {
     eventSource.addEventListener('order_update', function(e) {
         const order = JSON.parse(e.data);
         console.log('📝 Order updated:', order);
+        
+        // Update notification badge
+        updateNotificationBadge(1);
+        
+        // Add to notification list
+        addNotificationToList('Order Updated', `Order #${order.orderId.slice(-8)} - ${order.status}`, 'info');
         
         // Show notification
         showNotification('Order Updated', `Order #${order.orderId.slice(-8)} - ${order.status}`);
@@ -196,10 +208,75 @@ function playNotificationSound() {
     audio.play().catch(e => console.log('Sound play failed:', e));
 }
 
+function updateNotificationBadge(increment = 1) {
+    const badge = document.getElementById('notificationBadge');
+    if (badge) {
+        let count = parseInt(badge.textContent) || 0;
+        count += increment;
+        badge.textContent = count;
+        badge.style.display = count > 0 ? 'inline-block' : 'none';
+    }
+}
+
+function addNotificationToList(title, message, type = 'info') {
+    const list = document.getElementById('notificationList');
+    if (!list) return;
+    
+    // Remove "no notifications" message if exists
+    const emptyMsg = list.querySelector('.text-muted');
+    if (emptyMsg) {
+        emptyMsg.remove();
+    }
+    
+    // Create notification item
+    const item = document.createElement('li');
+    const iconClass = type === 'success' ? 'bi-check-circle-fill text-success' : 'bi-info-circle-fill text-info';
+    item.innerHTML = `
+        <a class="dropdown-item py-2" href="#">
+            <div class="d-flex align-items-start">
+                <i class="bi ${iconClass} me-2 mt-1"></i>
+                <div class="flex-grow-1">
+                    <strong class="d-block">${title}</strong>
+                    <small class="text-muted">${message}</small>
+                    <small class="d-block text-muted">${new Date().toLocaleTimeString()}</small>
+                </div>
+            </div>
+        </a>
+    `;
+    
+    // Add to top of list
+    list.insertBefore(item, list.firstChild);
+    
+    // Limit to 10 notifications
+    while (list.children.length > 10) {
+        list.removeChild(list.lastChild);
+    }
+}
+
 // Request notification permission
 if ('Notification' in window && Notification.permission === 'default') {
     Notification.requestPermission();
 }
+
+// Clear notifications function (for base.html button)
+window.clearNotifications = function() {
+    const badge = document.getElementById('notificationBadge');
+    const list = document.getElementById('notificationList');
+    
+    if (badge) {
+        badge.textContent = '0';
+        badge.style.display = 'none';
+    }
+    
+    if (list) {
+        list.innerHTML = `
+            <li class="text-center text-muted py-3">
+                <i class="bi bi-bell-slash fs-4 d-block mb-2"></i>
+                No new notifications
+            </li>
+        `;
+    }
+};
 
 // Connect on page load
 connectSSE();
