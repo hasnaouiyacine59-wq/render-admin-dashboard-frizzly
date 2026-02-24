@@ -132,10 +132,24 @@ function connectSSE() {
     
     connectionAttempts++;
     console.log(`🔄 Connecting to SSE (attempt ${connectionAttempts})...`);
+    console.log('🔗 SSE URL:', window.location.origin + '/api/stream-orders');
+    
+    // Set timeout to detect stuck connection
+    const connectionTimeout = setTimeout(() => {
+        console.error('⏱️ SSE connection timeout (10s)');
+        const indicator = document.getElementById('connectionStatus');
+        if (indicator && indicator.textContent === 'Connecting...') {
+            indicator.className = 'badge bg-warning';
+            indicator.textContent = 'Timeout';
+            // Force error to trigger retry
+            if (eventSource) eventSource.close();
+        }
+    }, 10000);
     
     eventSource = new EventSource('/api/stream-orders');
     
     eventSource.onopen = function() {
+        clearTimeout(connectionTimeout);
         console.log('✅ SSE Connected');
         connectionAttempts = 0; // Reset on successful connection
         
