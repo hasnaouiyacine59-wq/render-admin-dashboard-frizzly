@@ -695,12 +695,23 @@ def send_test_notification():
         user_id = request.form.get('user_id')
         title = request.form.get('title', 'Test Notification')
         body = request.form.get('body', 'This is a test notification')
-        send_notification(user_id, title, body)
-        flash('Test notification sent', 'success')
+        
+        # Get user and send notification
+        user_doc = db.collection('users').document(user_id).get()
+        if user_doc.exists and user_doc.to_dict().get('fcmToken'):
+            fcm_token = user_doc.to_dict()['fcmToken']
+            message = messaging.Message(
+                notification=messaging.Notification(title=title, body=body),
+                token=fcm_token
+            )
+            messaging.send(message)
+            return jsonify({'success': True, 'message': 'Notification sent successfully'})
+        else:
+            return jsonify({'success': False, 'error': 'User has no FCM token'}), 400
+            
     except Exception as e:
         app.logger.error(f"Test notification error: {e}")
-        flash('Failed to send test notification', 'error')
-    return redirect(url_for('notifications'))
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/activity-logs')
 @login_required
