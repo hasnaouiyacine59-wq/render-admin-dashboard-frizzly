@@ -246,22 +246,6 @@ function updateDashboardStats() {
         })
         .catch(e => console.error('Failed to update stats:', e));
 }
-        
-        // Add to notification list
-        addNotificationToList('Order Updated', `Order #${order.orderId.slice(-8)} - ${order.status}`, 'info');
-        
-        // Show notification
-        showNotification('Order Updated', `Order #${order.orderId.slice(-8)} - ${order.status}`);
-    });
-    
-    eventSource.onerror = function(e) {
-        console.error('❌ SSE Error:', e);
-        eventSource.close();
-        
-        // Reconnect after 5 seconds
-        setTimeout(connectSSE, 5000);
-    };
-}
 
 function showNotification(title, message) {
     // Browser notification
