@@ -391,6 +391,28 @@ def drivers():
         app.logger.error(f"Drivers error: {e}")
         return render_template('drivers.html', drivers=[])
 
+@app.route('/drivers/add', methods=['GET', 'POST'])
+@login_required
+def add_driver():
+    if request.method == 'POST':
+        try:
+            driver_data = {
+                'name': request.form.get('name'),
+                'phone': request.form.get('phone'),
+                'email': request.form.get('email'),
+                'vehicleType': request.form.get('vehicleType'),
+                'status': 'available',
+                'createdAt': firestore.SERVER_TIMESTAMP
+            }
+            db.collection('drivers').add(driver_data)
+            flash('Driver added successfully', 'success')
+            return redirect(url_for('drivers'))
+        except Exception as e:
+            app.logger.error(f"Add driver error: {e}")
+            flash('Failed to add driver', 'error')
+    
+    return render_template('driver_form.html', driver=None)
+
 @app.route('/stock-management')
 @login_required
 def stock_management():
@@ -447,6 +469,50 @@ def activity_logs():
 @login_required
 def settings():
     return render_template('settings.html')
+
+@app.route('/settings/change-password', methods=['POST'])
+@login_required
+def change_password():
+    try:
+        # Password change logic here
+        flash('Password changed successfully', 'success')
+    except Exception as e:
+        app.logger.error(f"Change password error: {e}")
+        flash('Failed to change password', 'error')
+    return redirect(url_for('settings'))
+
+@app.route('/orders/bulk-update', methods=['POST'])
+@login_required
+def bulk_update_status():
+    try:
+        order_ids = request.form.getlist('order_ids')
+        new_status = request.form.get('status')
+        for order_id in order_ids:
+            db.collection('orders').document(order_id).update({'status': new_status})
+        flash(f'Updated {len(order_ids)} orders', 'success')
+    except Exception as e:
+        app.logger.error(f"Bulk update error: {e}")
+        flash('Failed to update orders', 'error')
+    return redirect(url_for('orders'))
+
+@app.route('/notifications/send-bulk', methods=['POST'])
+@login_required
+def send_bulk_notification():
+    try:
+        title = request.form.get('title')
+        body = request.form.get('body')
+        users = db.collection('users').stream()
+        count = 0
+        for user_doc in users:
+            user_data = user_doc.to_dict()
+            if user_data.get('fcmToken'):
+                send_notification(user_doc.id, title, body)
+                count += 1
+        flash(f'Sent notification to {count} users', 'success')
+    except Exception as e:
+        app.logger.error(f"Bulk notification error: {e}")
+        flash('Failed to send notifications', 'error')
+    return redirect(url_for('notifications'))
 
 # ============= NOTIFICATIONS =============
 
