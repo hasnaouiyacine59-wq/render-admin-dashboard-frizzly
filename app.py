@@ -775,8 +775,18 @@ def bulk_update_status():
     try:
         order_ids = request.form.getlist('order_ids')
         new_status = request.form.get('status')
+        
         for order_id in order_ids:
+            # Update order status
             db.collection('orders').document(order_id).update({'status': new_status})
+            
+            # Send notification to user
+            order_doc = db.collection('orders').document(order_id).get()
+            if order_doc.exists:
+                user_id = order_doc.to_dict().get('userId')
+                if user_id:
+                    send_notification(user_id, 'Order Update', f'Your order status: {new_status}')
+        
         flash(f'Updated {len(order_ids)} orders', 'success')
     except Exception as e:
         app.logger.error(f"Bulk update error: {e}")
