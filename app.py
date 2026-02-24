@@ -38,6 +38,18 @@ VALID_ORDER_STATUSES = [
     'CANCELLED', 'RETURNED'
 ]
 
+# Custom Jinja2 filters
+@app.template_filter('timestamp_to_date')
+def timestamp_to_date(timestamp):
+    """Convert timestamp to readable date"""
+    try:
+        if timestamp:
+            ts = timestamp / 1000 if timestamp > 1e12 else timestamp
+            return datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+    except:
+        pass
+    return 'N/A'
+
 # Flask-Login setup
 login_manager = LoginManager()
 login_manager.init_app(app)
