@@ -354,7 +354,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             list.innerHTML = notifications.map((notif, index) => `
                 <li>
-                    <a class="dropdown-item d-flex justify-content-between align-items-center" href="/orders/${notif.orderId}" onclick="removeNotification(${index}); return true;">
+                    <a class="dropdown-item d-flex justify-content-between align-items-center" href="/orders/${notif.id}" onclick="removeNotification(${index}); return true;">
                         <div class="flex-grow-1">
                             <div><strong>New Order #${notif.orderId.slice(-8)}</strong></div>
                             <div class="text-muted small">$${notif.totalAmount.toFixed(2)} • ${formatTime(notif.timestamp)}</div>
