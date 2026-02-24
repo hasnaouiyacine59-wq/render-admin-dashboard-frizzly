@@ -47,37 +47,6 @@ Dashboard
     </div>
 </div>
 
-<!-- Orders Management Card -->
-<div class="table-card mb-4">
-    <h5 class="mb-3"><i class="bi bi-cart-check me-2"></i>Orders Management</h5>
-    <div class="row g-3">
-        <div class="col-md-3">
-            <div class="stat-card primary text-center py-3">
-                <h3 class="mb-2">{{ stats.total_orders }}</h3>
-                <i class="bi bi-cart-check" style="font-size: 2rem;"></i>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card info text-center py-3">
-                <h3 class="mb-2">{{ stats.pending_orders }}</h3>
-                <i class="bi bi-clock-history" style="font-size: 2rem;"></i>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card warning text-center py-3">
-                <h3 class="mb-2">{{ stats.in_progress_orders or 0 }}</h3>
-                <i class="bi bi-truck" style="font-size: 2rem;"></i>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card success text-center py-3">
-                <h3 class="mb-2">{{ stats.delivered_orders or 0 }}</h3>
-                <i class="bi bi-check-circle" style="font-size: 2rem;"></i>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- Recent Orders -->
 <div class="table-card">
     <div class="d-flex justify-content-between align-items-center mb-3">

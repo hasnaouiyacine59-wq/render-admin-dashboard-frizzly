@@ -63,6 +63,48 @@
         .btn-gradient { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; color: white; }
         .btn-gradient:hover { opacity: 0.9; color: white; }
 
+        /* Modern Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            animation: fadeIn 0.3s ease;
+        }
+        .loading-overlay.active {
+            display: flex;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .loading-text {
+            position: absolute;
+            margin-top: 100px;
+            font-size: 16px;
+            color: #667eea;
+            font-weight: 500;
+        }
+
         /* Responsive adjustments */
         @media (max-width: 992px) {
             .sidebar {
@@ -82,6 +124,14 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div>
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Processing...</div>
+        </div>
+    </div>
+
     <!-- Sidebar -->
     <div class="sidebar">
         <div class="logo">
@@ -140,6 +190,27 @@
                     <i class="bi bi-list fs-4"></i>
                 </button>
                 <span class="navbar-brand mb-0 h1">{% block page_title %}Dashboard{% endblock %}</span>
+                
+                <!-- Order Stats in Navbar -->
+                <div class="d-none d-lg-flex align-items-center gap-2 ms-auto me-3">
+                    <div class="d-flex align-items-center px-3 py-2 rounded" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                        <h5 class="mb-0 me-2">{{ stats.total_orders if stats else 0 }}</h5>
+                        <i class="bi bi-cart-check" style="font-size: 1.2rem;"></i>
+                    </div>
+                    <div class="d-flex align-items-center px-3 py-2 rounded" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
+                        <h5 class="mb-0 me-2">{{ stats.pending_orders if stats else 0 }}</h5>
+                        <i class="bi bi-clock-history" style="font-size: 1.2rem;"></i>
+                    </div>
+                    <div class="d-flex align-items-center px-3 py-2 rounded" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+                        <h5 class="mb-0 me-2">{{ stats.in_progress_orders if stats else 0 }}</h5>
+                        <i class="bi bi-truck" style="font-size: 1.2rem;"></i>
+                    </div>
+                    <div class="d-flex align-items-center px-3 py-2 rounded" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;">
+                        <h5 class="mb-0 me-2">{{ stats.delivered_orders if stats else 0 }}</h5>
+                        <i class="bi bi-check-circle" style="font-size: 1.2rem;"></i>
+                    </div>
+                </div>
+                
                 <div class="d-flex align-items-center">
                     <!-- Notification Bell Dropdown -->
                     <div class="dropdown me-3">
@@ -415,6 +486,34 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('🔵 Page loaded, notifications:', notifications.length);
         updateNotificationDropdown();
         connectSSE();
+    });
+
+    // Loading overlay functions
+    window.showLoading = function(text = 'Processing...') {
+        const overlay = document.getElementById('loadingOverlay');
+        const loadingText = overlay.querySelector('.loading-text');
+        if (loadingText) loadingText.textContent = text;
+        overlay.classList.add('active');
+    };
+
+    window.hideLoading = function() {
+        const overlay = document.getElementById('loadingOverlay');
+        overlay.classList.remove('active');
+    };
+
+    // Auto-show loading on form submit
+    document.addEventListener('submit', function(e) {
+        if (e.target.tagName === 'FORM') {
+            showLoading('Submitting...');
+        }
+    });
+
+    // Auto-show loading on navigation
+    document.addEventListener('click', function(e) {
+        const link = e.target.closest('a');
+        if (link && link.href && !link.target && !link.href.startsWith('#') && !link.href.startsWith('javascript:')) {
+            showLoading('Loading...');
+        }
     });
 </script>
 
