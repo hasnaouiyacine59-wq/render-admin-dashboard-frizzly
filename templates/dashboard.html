@@ -172,9 +172,11 @@ function showNotification(title, message) {
         });
     }
     
-    // Toast notification (Bootstrap)
+    // Toast notification (Bootstrap) - positioned below navbar
     const toast = document.createElement('div');
-    toast.className = 'toast position-fixed top-0 end-0 m-3';
+    toast.className = 'toast position-fixed end-0 m-3';
+    toast.style.top = '80px'; // Below navbar
+    toast.style.zIndex = '9999'; // Above everything
     toast.setAttribute('role', 'alert');
     toast.innerHTML = `
         <div class="toast-header bg-success text-white">
