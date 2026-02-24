@@ -31,6 +31,13 @@ if not firebase_admin._apps:
 
 db = firestore.client()
 
+# Constants
+VALID_ORDER_STATUSES = [
+    'PENDING', 'CONFIRMED', 'PREPARING_ORDER', 'READY_FOR_PICKUP',
+    'ON_WAY', 'OUT_FOR_DELIVERY', 'DELIVERED', 'DELIVERY_ATTEMPT_FAILED',
+    'CANCELLED', 'RETURNED'
+]
+
 # Flask-Login setup
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -152,10 +159,10 @@ def orders():
         
         orders_list.sort(key=lambda x: x.get('timestamp', 0), reverse=True)
         
-        return render_template('orders.html', orders=orders_list, status_filter=status_filter)
+        return render_template('orders.html', orders=orders_list, status_filter=status_filter, valid_statuses=VALID_ORDER_STATUSES)
     except Exception as e:
         app.logger.error(f"Orders error: {e}")
-        return render_template('orders.html', orders=[], status_filter='all')
+        return render_template('orders.html', orders=[], status_filter='all', valid_statuses=VALID_ORDER_STATUSES)
 
 @app.route('/orders/<order_id>')
 @login_required
@@ -169,7 +176,14 @@ def order_detail(order_id):
         order = doc.to_dict()
         order['id'] = doc.id
         
-        return render_template('order_detail.html', order=order)
+        # Get available drivers
+        drivers = []
+        for d in db.collection('drivers').where('status', '==', 'available').stream():
+            driver_data = d.to_dict()
+            driver_data['id'] = d.id
+            drivers.append(driver_data)
+        
+        return render_template('order_detail.html', order=order, drivers=drivers, valid_statuses=VALID_ORDER_STATUSES)
     except Exception as e:
         app.logger.error(f"Order detail error: {e}")
         flash('Error loading order', 'error')
