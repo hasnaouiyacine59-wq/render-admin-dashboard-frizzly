@@ -272,7 +272,7 @@ def add_product():
             app.logger.error(f"Add product error: {e}")
             flash('Failed to add product', 'error')
     
-    return render_template('product_form.html', product=None)
+    return render_template('add_product.html')
 
 @app.route('/products/<product_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -305,7 +305,7 @@ def edit_product(product_id):
         
         product = doc.to_dict()
         product['id'] = doc.id
-        return render_template('product_form.html', product=product)
+        return render_template('edit_product.html', product=product)
     except Exception as e:
         app.logger.error(f"Load product error: {e}")
         flash('Error loading product', 'error')
@@ -371,10 +371,10 @@ def delivery_logistics():
             data['id'] = doc.id
             orders.append(data)
         
-        return render_template('delivery_logistics.html', orders=orders)
+        return render_template('delivery.html', orders=orders)
     except Exception as e:
         app.logger.error(f"Delivery logistics error: {e}")
-        return render_template('delivery_logistics.html', orders=[])
+        return render_template('delivery.html', orders=[])
 
 @app.route('/drivers')
 @login_required
@@ -386,10 +386,18 @@ def drivers():
             data['id'] = doc.id
             drivers_list.append(data)
         
-        return render_template('drivers.html', drivers=drivers_list)
+        # Calculate stats
+        stats = {
+            'total': len(drivers_list),
+            'available': len([d for d in drivers_list if d.get('status') == 'available']),
+            'on_delivery': len([d for d in drivers_list if d.get('status') == 'on_delivery']),
+            'offline': len([d for d in drivers_list if d.get('status') == 'offline'])
+        }
+        
+        return render_template('drivers.html', drivers=drivers_list, stats=stats)
     except Exception as e:
         app.logger.error(f"Drivers error: {e}")
-        return render_template('drivers.html', drivers=[])
+        return render_template('drivers.html', drivers=[], stats={'total': 0, 'available': 0, 'on_delivery': 0, 'offline': 0})
 
 @app.route('/drivers/add', methods=['GET', 'POST'])
 @login_required
@@ -411,7 +419,7 @@ def add_driver():
             app.logger.error(f"Add driver error: {e}")
             flash('Failed to add driver', 'error')
     
-    return render_template('driver_form.html', driver=None)
+    return render_template('add_driver.html')
 
 @app.route('/drivers/<driver_id>')
 @login_required
@@ -456,7 +464,7 @@ def edit_driver(driver_id):
             return redirect(url_for('drivers'))
         driver = doc.to_dict()
         driver['id'] = doc.id
-        return render_template('driver_form.html', driver=driver)
+        return render_template('edit_driver.html', driver=driver)
     except Exception as e:
         app.logger.error(f"Load driver error: {e}")
         flash('Error loading driver', 'error')
@@ -498,10 +506,10 @@ def stock_management():
             data['id'] = doc.id
             products.append(data)
         
-        return render_template('stock_management.html', products=products)
+        return render_template('stock.html', products=products)
     except Exception as e:
         app.logger.error(f"Stock management error: {e}")
-        return render_template('stock_management.html', products=[])
+        return render_template('stock.html', products=[])
 
 @app.route('/products/<product_id>/update-stock', methods=['POST'])
 @login_required
