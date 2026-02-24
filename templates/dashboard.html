@@ -20,19 +20,6 @@ Dashboard
 <!-- Stats Cards -->
 <div class="row g-4 mb-4">
     <div class="col-md-3">
-        <div class="stat-card primary">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="text-muted mb-2">Total Orders</h6>
-                    <h2 class="mb-0">{{ stats.total_orders }}</h2>
-                </div>
-                <div class="icon">
-                    <i class="bi bi-cart-check"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
         <div class="stat-card success">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
@@ -58,15 +45,61 @@ Dashboard
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="stat-card info">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="text-muted mb-2">Pending Orders</h6>
-                    <h2 class="mb-0">{{ stats.pending_orders }}</h2>
+</div>
+
+<!-- Orders Management Card -->
+<div class="table-card mb-4">
+    <h5 class="mb-3"><i class="bi bi-cart-check me-2"></i>Orders Management</h5>
+    <div class="row g-3">
+        <div class="col-md-3">
+            <div class="stat-card primary">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Total Orders</h6>
+                        <h2 class="mb-0">{{ stats.total_orders }}</h2>
+                    </div>
+                    <div class="icon">
+                        <i class="bi bi-cart-check"></i>
+                    </div>
                 </div>
-                <div class="icon">
-                    <i class="bi bi-clock-history"></i>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card info">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Pending</h6>
+                        <h2 class="mb-0">{{ stats.pending_orders }}</h2>
+                    </div>
+                    <div class="icon">
+                        <i class="bi bi-clock-history"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card warning">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">In Progress</h6>
+                        <h2 class="mb-0">{{ stats.in_progress_orders or 0 }}</h2>
+                    </div>
+                    <div class="icon">
+                        <i class="bi bi-truck"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card success">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Delivered</h6>
+                        <h2 class="mb-0">{{ stats.delivered_orders or 0 }}</h2>
+                    </div>
+                    <div class="icon">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
                 </div>
             </div>
         </div>
@@ -120,8 +153,7 @@ Dashboard
 </div>
 
 <script>
-// Real-time order notifications via SSE
-let eventSource = null;
+// Real-time order notifications via SSE (dashboard specific)
 let connectionAttempts = 0;
 const maxRetries = 5;
 
