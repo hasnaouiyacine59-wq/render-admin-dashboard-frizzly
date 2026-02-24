@@ -269,48 +269,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-    <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const sidebarToggle = document.getElementById('sidebarToggle');
-    const sidebar = document.querySelector('.sidebar');
-    const mainContent = document.querySelector('.main-content');
-
-    // Initial check for screen size on load
-    if (window.innerWidth <= 992) {
-        sidebar.classList.add('collapsed');
-        mainContent.classList.add('shifted');
-    }
-
-    sidebarToggle.addEventListener('click', function() {
-        sidebar.classList.toggle('show'); // For mobile overlay
-        // For larger screens, collapse/expand
-        if (window.innerWidth > 992) {
-            sidebar.classList.toggle('collapsed');
-            mainContent.classList.toggle('shifted');
-        }
-    });
-
-    // Close sidebar when clicking outside on small screens
-    document.addEventListener('click', function(event) {
-        if (window.innerWidth <= 992 && sidebar.classList.contains('show') && 
-            !sidebar.contains(event.target) && !sidebarToggle.contains(event.target)) {
-            sidebar.classList.remove('show');
-        }
-    });
-
-    // Adjust sidebar on window resize
-    window.addEventListener('resize', function() {
-        if (window.innerWidth > 992) {
-            sidebar.classList.remove('collapsed', 'show');
-            mainContent.classList.remove('shifted');
-        } else {
-            sidebar.classList.add('collapsed');
-            mainContent.classList.add('shifted');
-            sidebar.classList.remove('show'); // Ensure it's hidden on resize if it was open
-        }
-    });
-});
-</script>
 <!-- Real-time Notifications via API (SSE) - v2.0 -->
 <script>
     let knownOrderIds = new Set(JSON.parse(localStorage.getItem('knownOrderIds') || '[]'));
