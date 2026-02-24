@@ -214,6 +214,23 @@ def stream_orders():
     response.headers['X-Accel-Buffering'] = 'no'
     return response
 
+@app.route('/api/dashboard-stats')
+@login_required
+def dashboard_stats():
+    """API endpoint for dashboard stats (for real-time updates)"""
+    try:
+        orders = list(db.collection('orders').stream())
+        pending_orders = [o for o in orders if o.to_dict().get('status') == 'PENDING']
+        
+        return jsonify({
+            'total_orders': len(orders),
+            'pending_orders': len(pending_orders),
+            'success': True
+        })
+    except Exception as e:
+        app.logger.error(f"Dashboard stats error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 # ============= DASHBOARD =============
 
 @app.route('/')

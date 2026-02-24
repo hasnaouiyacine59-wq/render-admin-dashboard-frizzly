@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 
 {% block title %}Dashboard - FRIZZLY Admin{% endblock %}
-{% block page_title %}Dashboard{% endblock %}
+{% block page_title %}
+Dashboard 
+<span id="connectionStatus" class="badge bg-secondary ms-2">Connecting...</span>
+{% endblock %}
 
 {% block content %}
 <!-- Low Stock Alert -->
@@ -119,21 +122,34 @@
 <script>
 // Real-time order notifications via SSE
 let eventSource = null;
+let connectionAttempts = 0;
+const maxRetries = 5;
 
 function connectSSE() {
     if (eventSource) {
         eventSource.close();
     }
     
+    connectionAttempts++;
+    console.log(`🔄 Connecting to SSE (attempt ${connectionAttempts})...`);
+    
     eventSource = new EventSource('/api/stream-orders');
     
     eventSource.onopen = function() {
         console.log('✅ SSE Connected');
+        connectionAttempts = 0; // Reset on successful connection
+        
+        // Update connection status indicator
+        const indicator = document.getElementById('connectionStatus');
+        if (indicator) {
+            indicator.className = 'badge bg-success';
+            indicator.textContent = 'Live';
+        }
     };
     
     eventSource.addEventListener('new_order', function(e) {
         const order = JSON.parse(e.data);
-        console.log('🔔 New order:', order);
+        console.log('🔔 New order received:', order);
         
         // Update notification badge
         updateNotificationBadge(1);
@@ -147,8 +163,14 @@ function connectSSE() {
         // Play sound
         playNotificationSound();
         
-        // Reload page to show new order
-        setTimeout(() => location.reload(), 2000);
+        // Update stats dynamically instead of reloading
+        updateDashboardStats();
+        
+        // Reload page after 3 seconds to show new order in table
+        setTimeout(() => {
+            console.log('🔄 Reloading page to show new order...');
+            location.reload();
+        }, 3000);
     });
     
     eventSource.addEventListener('order_update', function(e) {
@@ -157,6 +179,59 @@ function connectSSE() {
         
         // Update notification badge
         updateNotificationBadge(1);
+        
+        // Add to notification list
+        addNotificationToList('Order Updated', `Order #${order.orderId.slice(-8)} - ${order.status}`, 'info');
+        
+        // Show notification
+        showNotification('Order Updated', `Order #${order.orderId.slice(-8)} - ${order.status}`);
+        
+        // Update stats
+        updateDashboardStats();
+    });
+    
+    eventSource.onerror = function(e) {
+        console.error('❌ SSE Error:', e);
+        console.log('ReadyState:', eventSource.readyState);
+        
+        // Update connection status indicator
+        const indicator = document.getElementById('connectionStatus');
+        if (indicator) {
+            indicator.className = 'badge bg-danger';
+            indicator.textContent = 'Disconnected';
+        }
+        
+        eventSource.close();
+        
+        // Retry with exponential backoff
+        if (connectionAttempts < maxRetries) {
+            const delay = Math.min(1000 * Math.pow(2, connectionAttempts), 30000);
+            console.log(`⏳ Reconnecting in ${delay/1000}s...`);
+            setTimeout(connectSSE, delay);
+        } else {
+            console.error('❌ Max retries reached. Please refresh the page.');
+            if (indicator) {
+                indicator.className = 'badge bg-warning';
+                indicator.textContent = 'Offline';
+            }
+        }
+    };
+}
+
+function updateDashboardStats() {
+    // Fetch updated stats without full page reload
+    fetch('/api/dashboard-stats')
+        .then(r => r.json())
+        .then(data => {
+            console.log('📊 Updated stats:', data);
+            // Update stat cards if they exist
+            const totalOrders = document.querySelector('.stat-card.primary h2');
+            const pendingOrders = document.querySelector('.stat-card.info h2');
+            if (totalOrders && data.total_orders) totalOrders.textContent = data.total_orders;
+            if (pendingOrders && data.pending_orders) pendingOrders.textContent = data.pending_orders;
+        })
+        .catch(e => console.error('Failed to update stats:', e));
+}
         
         // Add to notification list
         addNotificationToList('Order Updated', `Order #${order.orderId.slice(-8)} - ${order.status}`, 'info');
