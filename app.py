@@ -762,57 +762,5 @@ def send_notification(user_id, title, body):
     except Exception as e:
         app.logger.error(f"Send notification error: {e}")
 
-# ============= SSE FOR REAL-TIME ORDERS =============
-
-@app.route('/api/stream-orders')
-@login_required
-def stream_orders():
-    """Server-Sent Events for real-time order updates"""
-    import queue
-    
-    message_queue = queue.Queue(maxsize=100)
-    
-    def on_snapshot(col_snapshot, changes, read_time):
-        for change in changes:
-            if change.type.name in ['ADDED', 'MODIFIED']:
-                doc = change.document
-                data = doc.to_dict()
-                event_data = {
-                    'id': doc.id,
-                    'orderId': data.get('orderId', doc.id),
-                    'totalAmount': data.get('totalAmount', 0),
-                    'status': data.get('status', 'PENDING'),
-                    'type': 'new_order' if change.type.name == 'ADDED' else 'order_update'
-                }
-                try:
-                    message_queue.put_nowait(event_data)
-                except queue.Full:
-                    pass
-    
-    col_query = db.collection('orders').limit(20)
-    doc_watch = col_query.on_snapshot(on_snapshot)
-    
-    def generate():
-        try:
-            yield f"data: {json.dumps({'type': 'connected'})}\n\n"
-            
-            timeout_count = 0
-            while timeout_count < 6:  # 3 minutes
-                try:
-                    event_data = message_queue.get(timeout=30)
-                    event_type = event_data.pop('type', 'message')
-                    yield f"event: {event_type}\ndata: {json.dumps(event_data)}\n\n"
-                    timeout_count = 0
-                except queue.Empty:
-                    yield f": heartbeat\n\n"
-                    timeout_count += 1
-        finally:
-            doc_watch.unsubscribe()
-    
-    response = Response(generate(), mimetype='text/event-stream')
-    response.headers['Cache-Control'] = 'no-cache'
-    response.headers['X-Accel-Buffering'] = 'no'
-    return response
-
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)
