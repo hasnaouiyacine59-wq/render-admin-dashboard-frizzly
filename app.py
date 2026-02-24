@@ -522,7 +522,18 @@ def user_detail(user_id):
         
         user = doc.to_dict()
         user['id'] = doc.id
-        return render_template('user_detail.html', user=user)
+        
+        # Fetch user's orders
+        orders = []
+        for order_doc in db.collection('orders').where('userId', '==', user_id).stream():
+            order_data = order_doc.to_dict()
+            order_data['id'] = order_doc.id
+            orders.append(order_data)
+        
+        # Sort by timestamp (newest first)
+        orders.sort(key=lambda x: x.get('timestamp', 0), reverse=True)
+        
+        return render_template('user_detail.html', user=user, orders=orders)
     except Exception as e:
         app.logger.error(f"User detail error: {e}")
         flash('Error loading user', 'error')
