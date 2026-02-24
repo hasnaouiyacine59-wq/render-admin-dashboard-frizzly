@@ -200,6 +200,36 @@ def update_order_status(order_id):
     
     return redirect(url_for('order_detail', order_id=order_id))
 
+@app.route('/orders/export')
+@login_required
+def export_orders():
+    """Export orders to CSV"""
+    try:
+        import csv
+        from io import StringIO
+        
+        orders = [doc.to_dict() for doc in db.collection('orders').stream()]
+        
+        output = StringIO()
+        writer = csv.DictWriter(output, fieldnames=['id', 'orderId', 'status', 'totalAmount', 'timestamp'])
+        writer.writeheader()
+        for order in orders:
+            writer.writerow({
+                'id': order.get('id', ''),
+                'orderId': order.get('orderId', ''),
+                'status': order.get('status', ''),
+                'totalAmount': order.get('totalAmount', 0),
+                'timestamp': order.get('timestamp', '')
+            })
+        
+        response = Response(output.getvalue(), mimetype='text/csv')
+        response.headers['Content-Disposition'] = 'attachment; filename=orders.csv'
+        return response
+    except Exception as e:
+        app.logger.error(f"Export orders error: {e}")
+        flash('Failed to export orders', 'error')
+        return redirect(url_for('orders'))
+
 # ============= PRODUCTS =============
 
 @app.route('/products')
