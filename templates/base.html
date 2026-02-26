@@ -416,8 +416,6 @@ document.addEventListener('DOMContentLoaded', function() {
             sidebar.classList.remove('collapsed', 'show');
             mainContent.classList.remove('shifted');
         } else {
-            sidebar.classList.add('collapsed');
-            mainContent.classList.add('shifted');
             sidebar.classList.remove('show'); // Ensure it's hidden on resize if it was open
         }
     });
