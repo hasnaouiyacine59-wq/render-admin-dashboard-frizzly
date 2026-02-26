@@ -18,47 +18,51 @@
             top: 0; 
             left: 0; 
             height: 100vh; 
-            width: 250px; 
-            background: #2c3e50; /* Dark charcoal */
-            padding: 20px 0; 
+            width: 240px; /* YouTube expanded width */
+            background: #202020; /* Darker background */
+            padding: 15px 0; /* Slightly less padding */
             z-index: 1000; 
             transition: all 0.3s;
             overflow-x: hidden;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1); /* Subtle shadow */
+            overflow-y: auto; /* Enable vertical scrolling */
+            box-shadow: 2px 0 10px rgba(0,0,0,0.3); /* Stronger shadow */
         }
         .sidebar.collapsed {
-            width: 70px;
+            width: 72px; /* YouTube collapsed width */
         }
         .sidebar .logo { 
             color: white; 
-            font-size: 24px; 
+            font-size: 22px; /* Slightly smaller logo */
             font-weight: 700; 
-            padding: 0 20px; 
-            margin-bottom: 30px; 
+            padding: 0 15px; /* Adjusted padding */
+            margin-bottom: 20px; /* Less margin */
             white-space: nowrap;
             transition: all 0.3s;
+            display: flex;
+            align-items: center;
         }
         .sidebar.collapsed .logo {
             font-size: 20px;
             padding: 0 10px;
             text-align: center;
+            justify-content: center; /* Center logo icon */
         }
         .sidebar.collapsed .logo .logo-text {
             display: none;
         }
         .sidebar .nav-link { 
-            color: rgba(255,255,255,0.7); /* Lighter text */
-            padding: 10px 20px; /* Slightly less padding */
-            margin: 2px 0; /* Less margin */
+            color: rgba(255,255,255,0.8); /* Lighter text */
+            padding: 10px 20px; 
+            margin: 2px 0; 
             transition: all 0.3s; 
-            border-left: 4px solid transparent; /* Thicker border */
+            border-left: 4px solid transparent; 
             white-space: nowrap;
             display: flex;
             align-items: center;
-            font-size: 0.95rem; /* Slightly smaller font */
+            font-size: 0.9rem; /* Slightly smaller font */
         }
         .sidebar.collapsed .nav-link {
-            padding: 12px 10px;
+            padding: 10px 0; /* Centered padding for icons */
             justify-content: center;
         }
         .sidebar.collapsed .nav-link span {
@@ -66,63 +70,37 @@
         }
         .sidebar .nav-link:hover, .sidebar .nav-link.active { 
             color: white; 
-            background: rgba(255,255,255,0.08); /* More subtle background */
-            border-left-color: #667eea; /* Brand color for active */
+            background: rgba(255,255,255,0.15); /* More prominent hover/active */
+            border-left-color: #ff0000; /* YouTube red for active */
         }
         .sidebar .nav-link i { 
-            margin-right: 10px; 
-            width: 20px; 
+            margin-right: 15px; /* More margin for icons */
+            width: 24px; /* Slightly larger icon area */
             text-align: center;
+            font-size: 1.2rem; /* Larger icons */
         }
         .sidebar.collapsed .nav-link i {
             margin-right: 0;
         }
         .sidebar .menu-header {
-            color: rgba(255,255,255,0.4);
-            font-size: 0.75rem;
+            color: rgba(255,255,255,0.5); /* Lighter header text */
+            font-size: 0.7rem; /* Smaller header font */
             font-weight: 600;
             padding: 15px 20px 5px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.8px; /* More letter spacing */
             margin-top: 15px;
         }
         .sidebar.collapsed .menu-header {
             display: none;
         }
-        .sidebar-toggle-btn {
-            position: absolute;
-            bottom: 20px; /* Position at the bottom */
-            left: 50%;
-            transform: translateX(-50%);
-            width: 40px; /* Slightly larger */
-            height: 40px;
-            background: rgba(255,255,255,0.1); /* Blends with sidebar */
-            border: none; /* No border */
-            border-radius: 50%;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            z-index: 1001;
-            transition: all 0.3s;
-            font-size: 1.2rem; /* Larger icon */
-        }
-        .sidebar-toggle-btn:hover {
-            background: rgba(255,255,255,0.2);
-            color: white;
-        }
-        .sidebar.collapsed .sidebar-toggle-btn {
-            left: 50%;
-            transform: translateX(-50%) rotate(180deg); /* Rotate arrow */
-        }
         .main-content { 
-            margin-left: 250px; 
+            margin-left: 240px; /* Match sidebar width */
             padding: 20px; 
             transition: all 0.3s;
         }
         .main-content.shifted {
-            margin-left: 70px;
+            margin-left: 72px; /* Match collapsed sidebar width */
         }
         .navbar { background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.08); margin-bottom: 30px; position: relative; z-index: 1040; }
         .stat-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: transform 0.3s; }
@@ -229,9 +207,6 @@
 
     <!-- Sidebar -->
     <div class="sidebar">
-        <button class="sidebar-toggle-btn" id="sidebarToggleBtn" title="Toggle Sidebar">
-            <i class="bi bi-chevron-left"></i>
-        </button>
         <div class="logo">
             <i class="bi bi-basket"></i> <span class="logo-text">FRIZZLY</span>
         </div>
@@ -314,7 +289,12 @@
         <!-- Top Navbar -->
         <nav class="navbar navbar-expand-lg navbar-light">
             <div class="container-fluid">
-                <button class="btn btn-link d-lg-none me-3" type="button" id="sidebarToggle">
+                <!-- Desktop Toggle Button -->
+                <button class="btn btn-link me-3 d-none d-lg-block" type="button" id="desktopSidebarToggle">
+                    <i class="bi bi-list fs-4"></i>
+                </button>
+                <!-- Mobile Toggle Button -->
+                <button class="btn btn-link d-lg-none me-3" type="button" id="mobileSidebarToggle">
                     <i class="bi bi-list fs-4"></i>
                 </button>
                 <span class="navbar-brand mb-0 h1">{% block page_title %}Dashboard{% endblock %}</span>
@@ -428,34 +408,31 @@
     {% block extra_js %}
     <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const sidebarToggle = document.getElementById('sidebarToggle');
-    const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
+    const desktopSidebarToggle = document.getElementById('desktopSidebarToggle');
+    const mobileSidebarToggle = document.getElementById('mobileSidebarToggle');
     const sidebar = document.querySelector('.sidebar');
     const mainContent = document.querySelector('.main-content');
 
     // Desktop toggle button
-    sidebarToggleBtn.addEventListener('click', function() {
-        sidebar.classList.toggle('collapsed');
-        mainContent.classList.toggle('shifted');
-        
-        // Change icon direction
-        const icon = sidebarToggleBtn.querySelector('i');
-        if (sidebar.classList.contains('collapsed')) {
-            icon.className = 'bi bi-list'; // Hamburger when collapsed (to expand)
-        } else {
-            icon.className = 'bi bi-chevron-left'; // Chevron left when expanded (to collapse)
-        }
-    });
+    if (desktopSidebarToggle) {
+        desktopSidebarToggle.addEventListener('click', function() {
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('shifted');
+            // The icon for desktopSidebarToggle remains 'bi-list' (hamburger)
+        });
+    }
 
     // Mobile toggle
-    sidebarToggle.addEventListener('click', function() {
-        sidebar.classList.toggle('show');
-    });
+    if (mobileSidebarToggle) {
+        mobileSidebarToggle.addEventListener('click', function() {
+            sidebar.classList.toggle('show');
+        });
+    }
 
     // Close sidebar when clicking outside on small screens
     document.addEventListener('click', function(event) {
         if (window.innerWidth <= 992 && sidebar.classList.contains('show') && 
-            !sidebar.contains(event.target) && !sidebarToggle.contains(event.target)) {
+            !sidebar.contains(event.target) && !mobileSidebarToggle.contains(event.target)) {
             sidebar.classList.remove('show');
         }
     });
@@ -463,8 +440,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Adjust sidebar on window resize
     window.addEventListener('resize', function() {
         if (window.innerWidth > 992) {
-            sidebar.classList.remove('collapsed', 'show');
-            mainContent.classList.remove('shifted');
+            sidebar.classList.remove('show'); // Only remove 'show' if it was a mobile overlay
+            // Ensure desktop toggle icon is 'bi-list' if it somehow changed
+            if (desktopSidebarToggle) {
+                desktopSidebarToggle.querySelector('i').className = 'bi bi-list';
+            }
         } else {
             sidebar.classList.remove('show'); // Ensure it's hidden on resize if it was open
         }
