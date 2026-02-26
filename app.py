@@ -752,20 +752,35 @@ def analytics():
         
         # Calculate analytics
         status_counts = {}
+        monthly_revenue = {} # New calculation
+        
         for order in orders:
             status = order.get('status', 'UNKNOWN')
             status_counts[status] = status_counts.get(status, 0) + 1
+
+            # Calculate monthly revenue for DELIVERED orders
+            if status == 'DELIVERED' and order.get('timestamp'):
+                # Convert timestamp to datetime object
+                ts = order['timestamp'] / 1000 if order['timestamp'] > 1e12 else order['timestamp']
+                order_date = datetime.fromtimestamp(ts)
+                month_year = order_date.strftime('%Y-%m') # e.g., "2026-02"
+                
+                monthly_revenue[month_year] = monthly_revenue.get(month_year, 0) + order.get('totalAmount', 0)
         
+        # Sort monthly revenue by month-year
+        sorted_monthly_revenue = dict(sorted(monthly_revenue.items()))
+
         data = {
             'status_counts': status_counts,
             'total_orders': len(orders),
-            'total_revenue': sum(o.get('totalAmount', 0) for o in orders if o.get('status') == 'DELIVERED')
+            'total_revenue': sum(o.get('totalAmount', 0) for o in orders if o.get('status') == 'DELIVERED'),
+            'monthly_revenue': sorted_monthly_revenue # Pass to template
         }
         
         return render_template('analytics.html', data=data)
     except Exception as e:
         app.logger.error(f"Analytics error: {e}")
-        return render_template('analytics.html', data={'status_counts': {}, 'total_orders': 0, 'total_revenue': 0})
+        return render_template('analytics.html', data={'status_counts': {}, 'total_orders': 0, 'total_revenue': 0, 'monthly_revenue': {}}) # Add default
 
 @app.route('/notifications')
 @login_required
