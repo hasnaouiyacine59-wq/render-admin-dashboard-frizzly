@@ -19,11 +19,12 @@
             left: 0; 
             height: 100vh; 
             width: 250px; 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            background: #2c3e50; /* Dark charcoal */
             padding: 20px 0; 
             z-index: 1000; 
             transition: all 0.3s;
             overflow-x: hidden;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1); /* Subtle shadow */
         }
         .sidebar.collapsed {
             width: 70px;
@@ -46,14 +47,15 @@
             display: none;
         }
         .sidebar .nav-link { 
-            color: rgba(255,255,255,0.8); 
-            padding: 12px 20px; 
-            margin: 5px 0; 
+            color: rgba(255,255,255,0.7); /* Lighter text */
+            padding: 10px 20px; /* Slightly less padding */
+            margin: 2px 0; /* Less margin */
             transition: all 0.3s; 
-            border-left: 3px solid transparent; 
+            border-left: 4px solid transparent; /* Thicker border */
             white-space: nowrap;
             display: flex;
             align-items: center;
+            font-size: 0.95rem; /* Slightly smaller font */
         }
         .sidebar.collapsed .nav-link {
             padding: 12px 10px;
@@ -64,8 +66,8 @@
         }
         .sidebar .nav-link:hover, .sidebar .nav-link.active { 
             color: white; 
-            background: rgba(255,255,255,0.1); 
-            border-left-color: white; 
+            background: rgba(255,255,255,0.08); /* More subtle background */
+            border-left-color: #667eea; /* Brand color for active */
         }
         .sidebar .nav-link i { 
             margin-right: 10px; 
@@ -74,6 +76,15 @@
         }
         .sidebar.collapsed .nav-link i {
             margin-right: 0;
+        }
+        .sidebar .menu-header {
+            color: rgba(255,255,255,0.4);
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 15px 20px 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 15px;
         }
         .sidebar-toggle-btn {
             position: absolute;
@@ -216,46 +227,76 @@
             <i class="bi bi-basket"></i> <span class="logo-text">FRIZZLY</span>
         </div>
         <nav class="nav flex-column">
-            <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">
-                <i class="bi bi-speedometer2"></i> <span>Dashboard</span>
-            </a>
-            <a class="nav-link {% if request.endpoint in ['orders', 'order_detail'] %}active{% endif %}" href="{{ url_for('orders') }}">
-                <i class="bi bi-cart-check"></i> <span>Orders</span>
-            </a>
-            <a class="nav-link {% if request.endpoint == 'delivery_logistics' %}active{% endif %}" href="{{ url_for('delivery_logistics') }}">
-                <i class="bi bi-truck"></i> <span>Delivery</span>
-            </a>
-            <a class="nav-link {% if request.endpoint in ['products', 'add_product', 'edit_product'] %}active{% endif %}" href="{{ url_for('products') }}">
-                <i class="bi bi-box-seam"></i> <span>Products</span>
-            </a>
-            <a class="nav-link {% if request.endpoint == 'stock_management' %}active{% endif %}" href="{{ url_for('stock_management') }}">
-                <i class="bi bi-boxes"></i> <span>Stock</span>
-            </a>
-            <a class="nav-link {% if request.endpoint in ['drivers', 'add_driver', 'edit_driver', 'driver_detail'] %}active{% endif %}" href="{{ url_for('drivers') }}">
-                <i class="bi bi-person-badge"></i> <span>Drivers</span>
-            </a>
-            <a class="nav-link {% if request.endpoint == 'users' %}active{% endif %}" href="{{ url_for('users') }}">
-                <i class="bi bi-people"></i> <span>Users</span>
-            </a>
-            <a class="nav-link {% if request.endpoint == 'revenue' %}active{% endif %}" href="{{ url_for('revenue') }}">
-                <i class="bi bi-cash-stack"></i> <span>Revenue</span>
-            </a>
-            <a class="nav-link {% if request.endpoint == 'analytics' %}active{% endif %}" href="{{ url_for('analytics') }}">
-                <i class="bi bi-graph-up"></i> <span>Analytics</span>
-            </a>
-            <a class="nav-link {% if request.endpoint == 'notifications' %}active{% endif %}" href="{{ url_for('notifications') }}">
-                <i class="bi bi-bell"></i> <span>Notifications</span>
-            </a>
-            <a class="nav-link {% if request.endpoint == 'activity_logs' %}active{% endif %}" href="{{ url_for('activity_logs') }}">
-                <i class="bi bi-clock-history"></i> <span>Activity Logs</span>
-            </a>
-            <hr style="border-color: rgba(255,255,255,0.2); margin: 20px;">
-            <a class="nav-link {% if request.endpoint == 'settings' %}active{% endif %}" href="{{ url_for('settings') }}">
-                <i class="bi bi-gear"></i> <span>Settings</span>
-            </a>
-            <a class="nav-link" href="{{ url_for('logout') }}">
-                <i class="bi bi-box-arrow-right"></i> <span>Logout</span>
-            </a>
+            <ul class="list-unstyled">
+                <li>
+                    <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">
+                        <i class="bi bi-speedometer2"></i> <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="menu-header">Management</li>
+                <li>
+                    <a class="nav-link {% if request.endpoint in ['orders', 'order_detail'] %}active{% endif %}" href="{{ url_for('orders') }}">
+                        <i class="bi bi-cart-check"></i> <span>Orders</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="nav-link {% if request.endpoint == 'delivery_logistics' %}active{% endif %}" href="{{ url_for('delivery_logistics') }}">
+                        <i class="bi bi-truck"></i> <span>Delivery</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="nav-link {% if request.endpoint in ['products', 'add_product', 'edit_product'] %}active{% endif %}" href="{{ url_for('products') }}">
+                        <i class="bi bi-box-seam"></i> <span>Products</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="nav-link {% if request.endpoint == 'stock_management' %}active{% endif %}" href="{{ url_for('stock_management') }}">
+                        <i class="bi bi-boxes"></i> <span>Stock</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="nav-link {% if request.endpoint in ['drivers', 'add_driver', 'edit_driver', 'driver_detail'] %}active{% endif %}" href="{{ url_for('drivers') }}">
+                        <i class="bi bi-person-badge"></i> <span>Drivers</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="nav-link {% if request.endpoint == 'users' %}active{% endif %}" href="{{ url_for('users') }}">
+                        <i class="bi bi-people"></i> <span>Users</span>
+                    </a>
+                </li>
+                <li class="menu-header">Analytics & Reports</li>
+                <li>
+                    <a class="nav-link {% if request.endpoint == 'revenue' %}active{% endif %}" href="{{ url_for('revenue') }}">
+                        <i class="bi bi-cash-stack"></i> <span>Revenue</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="nav-link {% if request.endpoint == 'analytics' %}active{% endif %}" href="{{ url_for('analytics') }}">
+                        <i class="bi bi-graph-up"></i> <span>Analytics</span>
+                    </a>
+                </li>
+                <li class="menu-header">System</li>
+                <li>
+                    <a class="nav-link {% if request.endpoint == 'notifications' %}active{% endif %}" href="{{ url_for('notifications') }}">
+                        <i class="bi bi-bell"></i> <span>Notifications</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="nav-link {% if request.endpoint == 'activity_logs' %}active{% endif %}" href="{{ url_for('activity_logs') }}">
+                        <i class="bi bi-clock-history"></i> <span>Activity Logs</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="nav-link {% if request.endpoint == 'settings' %}active{% endif %}" href="{{ url_for('settings') }}">
+                        <i class="bi bi-gear"></i> <span>Settings</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="nav-link" href="{{ url_for('logout') }}">
+                        <i class="bi bi-box-arrow-right"></i> <span>Logout</span>
+                    </a>
+                </li>
+            </ul>
         </nav>
     </div>
 
