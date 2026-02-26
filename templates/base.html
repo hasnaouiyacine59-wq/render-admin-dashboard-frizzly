@@ -86,26 +86,35 @@
             letter-spacing: 0.5px;
             margin-top: 15px;
         }
+        .sidebar.collapsed .menu-header {
+            display: none;
+        }
         .sidebar-toggle-btn {
             position: absolute;
-            top: 20px;
-            right: -15px;
-            width: 30px;
-            height: 30px;
-            background: white;
-            border: 2px solid #667eea;
+            bottom: 20px; /* Position at the bottom */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px; /* Slightly larger */
+            height: 40px;
+            background: rgba(255,255,255,0.1); /* Blends with sidebar */
+            border: none; /* No border */
             border-radius: 50%;
+            color: white;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             z-index: 1001;
             transition: all 0.3s;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            font-size: 1.2rem; /* Larger icon */
         }
         .sidebar-toggle-btn:hover {
-            background: #667eea;
+            background: rgba(255,255,255,0.2);
             color: white;
+        }
+        .sidebar.collapsed .sidebar-toggle-btn {
+            left: 50%;
+            transform: translateX(-50%) rotate(180deg); /* Rotate arrow */
         }
         .main-content { 
             margin-left: 250px; 
@@ -432,9 +441,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // Change icon direction
         const icon = sidebarToggleBtn.querySelector('i');
         if (sidebar.classList.contains('collapsed')) {
-            icon.className = 'bi bi-chevron-right';
+            icon.className = 'bi bi-list'; // Hamburger when collapsed (to expand)
         } else {
-            icon.className = 'bi bi-chevron-left';
+            icon.className = 'bi bi-chevron-left'; // Chevron left when expanded (to collapse)
         }
     });
 
