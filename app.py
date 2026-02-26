@@ -3,7 +3,7 @@ FRIZZLY Admin Dashboard - Direct Firebase Version for Render
 Uses /etc/secrets/serviceAccountKey.json for Firebase connection
 """
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, Response
-from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash
 import firebase_admin
 from firebase_admin import credentials, firestore, messaging
@@ -12,12 +12,20 @@ from collections import defaultdict
 import os
 import json
 import time
-from functools import wraps
 import logging
 from logging.handlers import RotatingFileHandler
 
+# New imports from utils
+from .utils import User, admin_required, send_notification, VALID_ORDER_STATUSES
+from .blueprints.auth import auth_bp # Import auth blueprint
+
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'change-me-in-production')
+
+# CRITICAL SECURITY CHECK: Ensure SECRET_KEY is not default in production
+if not app.debug and app.secret_key == 'change-me-in-production':
+    raise ValueError("CRITICAL ERROR: SECRET_KEY must be set to a strong, unique value in production. "
+                     "Do NOT use 'change-me-in-production'.")
 
 # Setup logging
 if not app.debug:
@@ -32,13 +40,6 @@ if not firebase_admin._apps:
     firebase_admin.initialize_app(cred)
 
 db = firestore.client()
-
-# Constants
-VALID_ORDER_STATUSES = [
-    'PENDING', 'CONFIRMED', 'PREPARING_ORDER', 'READY_FOR_PICKUP',
-    'ON_WAY', 'OUT_FOR_DELIVERY', 'DELIVERED', 'DELIVERY_ATTEMPT_FAILED',
-    'CANCELLED', 'RETURNED'
-]
 
 # Custom Jinja2 filters
 @app.template_filter('timestamp_to_date')
@@ -55,13 +56,12 @@ def timestamp_to_date(timestamp):
 # Flask-Login setup
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'login'
-
-class User(UserMixin):
-    def __init__(self, uid, email, role='admin'):
-        self.id = uid
-        self.email = email
-        self.role = role
+login_manager.login_view = 'auth.login' # Update login_view to blueprint
+app.register_blueprint(auth_bp) # Register the auth blueprint
+from .blueprints.dashboard import dashboard_bp # Import dashboard blueprint
+app.register_blueprint(dashboard_bp) # Register the dashboard blueprint
+from .blueprints.orders import orders_bp # Import orders blueprint
+app.register_blueprint(orders_bp) # Register the orders blueprint
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -73,16 +73,6 @@ def load_user(user_id):
     except:
         pass
     return None
-
-def admin_required(f):
-    @wraps(f)
-    @login_required
-    def decorated_function(*args, **kwargs):
-        if not current_user.role == 'admin':
-            flash('Admin access required', 'error')
-            return redirect(url_for('dashboard'))
-        return f(*args, **kwargs)
-    return decorated_function
 
 # ============= CONTEXT PROCESSOR =============
 
@@ -102,36 +92,6 @@ def inject_stats():
         except:
             pass
     return {'stats': {'total_orders': 0, 'pending_orders': 0, 'in_progress_orders': 0, 'delivered_orders': 0}}
-
-# ============= AUTHENTICATION =============
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
-        
-        try:
-            admins = db.collection('admins').where('email', '==', email).limit(1).stream()
-            admin_doc = next(admins, None)
-            
-            if admin_doc and check_password_hash(admin_doc.to_dict().get('password', ''), password):
-                user = User(admin_doc.id, email, admin_doc.to_dict().get('role', 'admin'))
-                login_user(user)
-                return redirect(url_for('dashboard'))
-            
-            flash('Invalid credentials', 'error')
-        except Exception as e:
-            app.logger.error(f"Login error: {e}")
-            flash('Login failed', 'error')
-    
-    return render_template('login.html')
-
-@app.route('/logout')
-@login_required
-def logout():
-    logout_user()
-    return redirect(url_for('login'))
 
 # ============= FCM TOKEN =============
 
@@ -256,260 +216,7 @@ def dashboard_stats():
         app.logger.error(f"Dashboard stats error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-# ============= DASHBOARD =============
-
-@app.route('/')
-@login_required
-def dashboard():
-    try:
-        # Get counts
-        orders = list(db.collection('orders').stream())
-        products = list(db.collection('products').stream())
-        users = list(db.collection('users').stream())
-        
-        pending_orders = [o for o in orders if o.to_dict().get('status') == 'PENDING']
-        low_stock = [p for p in products if p.to_dict().get('stock', 0) < 10]
-        total_revenue = sum(o.to_dict().get('totalAmount', 0) for o in orders if o.to_dict().get('status') == 'DELIVERED')
-        
-        stats = {
-            'total_orders': len(orders),
-            'pending_orders': len(pending_orders),
-            'total_products': len(products),
-            'total_users': len(users),
-            'low_stock_products': len(low_stock),
-            'total_revenue': total_revenue
-        }
-        
-        # Recent orders
-        recent_orders = sorted(orders, key=lambda x: x.to_dict().get('timestamp', 0), reverse=True)[:10]
-        orders_data = []
-        for order in recent_orders:
-            data = order.to_dict()
-            data['id'] = order.id
-            orders_data.append(data)
-        
-        return render_template('dashboard.html', stats=stats, recent_orders=orders_data)
-    except Exception as e:
-        app.logger.error(f"Dashboard error: {e}")
-        return render_template('dashboard.html', stats={'total_orders': 0, 'pending_orders': 0, 'total_products': 0, 'total_users': 0, 'low_stock_products': 0, 'total_revenue': 0}, recent_orders=[])
-
-# ============= ORDERS =============
-
-@app.route('/orders')
-@login_required
-def orders():
-    try:
-        status_filter = request.args.get('status', 'all')
-        
-        orders_ref = db.collection('orders')
-        if status_filter != 'all':
-            orders_query = orders_ref.where('status', '==', status_filter)
-        else:
-            orders_query = orders_ref
-        
-        orders_list = []
-        for doc in orders_query.stream():
-            data = doc.to_dict()
-            data['id'] = doc.id
-            orders_list.append(data)
-        
-        orders_list.sort(key=lambda x: x.get('timestamp', 0), reverse=True)
-        
-        return render_template('orders.html', orders=orders_list, status_filter=status_filter, valid_statuses=VALID_ORDER_STATUSES)
-    except Exception as e:
-        app.logger.error(f"Orders error: {e}")
-        return render_template('orders.html', orders=[], status_filter='all', valid_statuses=VALID_ORDER_STATUSES)
-
-@app.route('/orders/<order_id>')
-@login_required
-def order_detail(order_id):
-    try:
-        doc = db.collection('orders').document(order_id).get()
-        if not doc.exists:
-            flash('Order not found', 'error')
-            return redirect(url_for('orders'))
-        
-        order = doc.to_dict()
-        order['id'] = doc.id
-        
-        # Get available drivers
-        drivers = []
-        for d in db.collection('drivers').where('status', '==', 'available').stream():
-            driver_data = d.to_dict()
-            driver_data['id'] = d.id
-            drivers.append(driver_data)
-        
-        return render_template('order_detail.html', order=order, drivers=drivers, valid_statuses=VALID_ORDER_STATUSES)
-    except Exception as e:
-        app.logger.error(f"Order detail error: {e}")
-        flash('Error loading order', 'error')
-        return redirect(url_for('orders'))
-
-@app.route('/orders/<order_id>/update-status', methods=['POST'])
-@login_required
-def update_order_status(order_id):
-    try:
-        new_status = request.form.get('status')
-        
-        db.collection('orders').document(order_id).update({
-            'status': new_status,
-            'updatedAt': firestore.SERVER_TIMESTAMP
-        })
-        
-        # Send notification to user
-        order_doc = db.collection('orders').document(order_id).get()
-        if order_doc.exists:
-            user_id = order_doc.to_dict().get('userId')
-            if user_id:
-                send_notification(user_id, 'Order Update', f'Your order status: {new_status}')
-        
-        flash('Order status updated', 'success')
-    except Exception as e:
-        app.logger.error(f"Update status error: {e}")
-        flash('Failed to update status', 'error')
-    
-    return redirect(url_for('order_detail', order_id=order_id))
-
-@app.route('/orders/export')
-@login_required
-def export_orders():
-    """Export orders to CSV"""
-    try:
-        import csv
-        from io import StringIO
-        
-        orders = [doc.to_dict() for doc in db.collection('orders').stream()]
-        
-        output = StringIO()
-        writer = csv.DictWriter(output, fieldnames=['id', 'orderId', 'status', 'totalAmount', 'timestamp'])
-        writer.writeheader()
-        for order in orders:
-            writer.writerow({
-                'id': order.get('id', ''),
-                'orderId': order.get('orderId', ''),
-                'status': order.get('status', ''),
-                'totalAmount': order.get('totalAmount', 0),
-                'timestamp': order.get('timestamp', '')
-            })
-        
-        response = Response(output.getvalue(), mimetype='text/csv')
-        response.headers['Content-Disposition'] = 'attachment; filename=orders.csv'
-        return response
-    except Exception as e:
-        app.logger.error(f"Export orders error: {e}")
-        flash('Failed to export orders', 'error')
-        return redirect(url_for('orders'))
-
 # ============= PRODUCTS =============
-
-@app.route('/products')
-@login_required
-def products():
-    try:
-        products_list = []
-        for doc in db.collection('products').stream():
-            data = doc.to_dict()
-            data['id'] = doc.id
-            products_list.append(data)
-        
-        pagination = {'total_pages': 1, 'has_prev': False, 'has_next': False, 'prev_num': 1, 'next_num': 1}
-        return render_template('products.html', products=products_list, pagination=pagination)
-    except Exception as e:
-        app.logger.error(f"Products error: {e}")
-        pagination = {'total_pages': 1, 'has_prev': False, 'has_next': False, 'prev_num': 1, 'next_num': 1}
-        return render_template('products.html', products=[], pagination=pagination)
-
-@app.route('/products/add', methods=['GET', 'POST'])
-@login_required
-def add_product():
-    if request.method == 'POST':
-        try:
-            product_data = {
-                'name': request.form.get('name'),
-                'description': request.form.get('description'),
-                'price': float(request.form.get('price', 0)),
-                'category': request.form.get('category'),
-                'stock': int(request.form.get('stock', 0)),
-                'imageUrl': request.form.get('imageUrl', ''),
-                'isActive': request.form.get('isActive') == 'on',
-                'createdAt': firestore.SERVER_TIMESTAMP
-            }
-            
-            db.collection('products').add(product_data)
-            flash('Product added successfully', 'success')
-            return redirect(url_for('products'))
-        except Exception as e:
-            app.logger.error(f"Add product error: {e}")
-            flash('Failed to add product', 'error')
-    
-    # Fetch categories
-    categories = []
-    try:
-        for cat_doc in db.collection('categories').stream():
-            cat_data = cat_doc.to_dict()
-            cat_data['id'] = cat_doc.id
-            categories.append(cat_data)
-    except Exception as e:
-        app.logger.error(f"Load categories error: {e}")
-    
-    return render_template('add_product.html', categories=categories)
-
-@app.route('/products/<product_id>/edit', methods=['GET', 'POST'])
-@login_required
-def edit_product(product_id):
-    if request.method == 'POST':
-        try:
-            product_data = {
-                'name': request.form.get('name'),
-                'description': request.form.get('description'),
-                'price': float(request.form.get('price', 0)),
-                'category': request.form.get('category'),
-                'stock': int(request.form.get('stock', 0)),
-                'imageUrl': request.form.get('imageUrl', ''),
-                'isActive': request.form.get('isActive') == 'on',
-                'updatedAt': firestore.SERVER_TIMESTAMP
-            }
-            
-            db.collection('products').document(product_id).update(product_data)
-            flash('Product updated successfully', 'success')
-            return redirect(url_for('products'))
-        except Exception as e:
-            app.logger.error(f"Edit product error: {e}")
-            flash('Failed to update product', 'error')
-    
-    try:
-        doc = db.collection('products').document(product_id).get()
-        if not doc.exists:
-            flash('Product not found', 'error')
-            return redirect(url_for('products'))
-        
-        product = doc.to_dict()
-        product['id'] = doc.id
-        
-        # Fetch categories
-        categories = []
-        for cat_doc in db.collection('categories').stream():
-            cat_data = cat_doc.to_dict()
-            cat_data['id'] = cat_doc.id
-            categories.append(cat_data)
-        
-        return render_template('edit_product.html', product=product, categories=categories)
-    except Exception as e:
-        app.logger.error(f"Load product error: {e}")
-        flash('Error loading product', 'error')
-        return redirect(url_for('products'))
-
-@app.route('/products/<product_id>/delete', methods=['POST'])
-@login_required
-def delete_product(product_id):
-    try:
-        db.collection('products').document(product_id).delete()
-        flash('Product deleted successfully', 'success')
-    except Exception as e:
-        app.logger.error(f"Delete product error: {e}")
-        flash('Failed to delete product', 'error')
-    
-    return redirect(url_for('products'))
 
 # ============= USERS =============
 
@@ -537,7 +244,7 @@ def user_detail(user_id):
         doc = db.collection('users').document(user_id).get()
         if not doc.exists:
             flash('User not found', 'error')
-            return redirect(url_for('users'))
+            return redirect(url_for('orders.orders'))
         
         user = doc.to_dict()
         user['id'] = doc.id
@@ -556,7 +263,7 @@ def user_detail(user_id):
     except Exception as e:
         app.logger.error(f"User detail error: {e}")
         flash('Error loading user', 'error')
-        return redirect(url_for('users'))
+        return redirect(url_for('orders.orders'))
 
 # ============= DELIVERY & DRIVERS =============
 
@@ -680,20 +387,7 @@ def delete_driver(driver_id):
         flash('Failed to delete driver', 'error')
     return redirect(url_for('drivers'))
 
-@app.route('/orders/<order_id>/assign-driver', methods=['POST'])
-@login_required
-def assign_driver(order_id):
-    try:
-        driver_id = request.form.get('driver_id')
-        db.collection('orders').document(order_id).update({
-            'driverId': driver_id,
-            'updatedAt': firestore.SERVER_TIMESTAMP
-        })
-        flash('Driver assigned successfully', 'success')
-    except Exception as e:
-        app.logger.error(f"Assign driver error: {e}")
-        flash('Failed to assign driver', 'error')
-    return redirect(url_for('order_detail', order_id=order_id))
+
 
 @app.route('/stock-management')
 @login_required
@@ -914,29 +608,7 @@ def change_password():
         flash('Failed to change password', 'error')
     return redirect(url_for('settings'))
 
-@app.route('/orders/bulk-update', methods=['POST'])
-@login_required
-def bulk_update_status():
-    try:
-        order_ids = request.form.getlist('order_ids')
-        new_status = request.form.get('status')
-        
-        for order_id in order_ids:
-            # Update order status
-            db.collection('orders').document(order_id).update({'status': new_status})
-            
-            # Send notification to user
-            order_doc = db.collection('orders').document(order_id).get()
-            if order_doc.exists:
-                user_id = order_doc.to_dict().get('userId')
-                if user_id:
-                    send_notification(user_id, 'Order Update', f'Your order status: {new_status}')
-        
-        flash(f'Updated {len(order_ids)} orders', 'success')
-    except Exception as e:
-        app.logger.error(f"Bulk update error: {e}")
-        flash('Failed to update orders', 'error')
-    return redirect(url_for('orders'))
+
 
 @app.route('/notifications/send-bulk', methods=['POST'])
 @login_required
@@ -956,29 +628,6 @@ def send_bulk_notification():
         app.logger.error(f"Bulk notification error: {e}")
         flash('Failed to send notifications', 'error')
     return redirect(url_for('notifications'))
-
-# ============= NOTIFICATIONS =============
-
-def send_notification(user_id, title, body):
-    """Send FCM notification to user"""
-    try:
-        user_doc = db.collection('users').document(user_id).get()
-        if user_doc.exists:
-            fcm_token = user_doc.to_dict().get('fcmToken')
-            if fcm_token:
-                # Use data-only message to trigger onMessageReceived in background
-                message = messaging.Message(
-                    data={
-                        'title': title,
-                        'body': body,
-                        'type': 'order',
-                        'timestamp': str(int(time.time() * 1000))
-                    },
-                    token=fcm_token
-                )
-                messaging.send(message)
-    except Exception as e:
-        app.logger.error(f"Send notification error: {e}")
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)
