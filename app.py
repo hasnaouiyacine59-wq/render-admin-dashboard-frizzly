@@ -7,7 +7,8 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 from werkzeug.security import check_password_hash
 import firebase_admin
 from firebase_admin import credentials, firestore, messaging
-from datetime import datetime
+from datetime import datetime, timedelta
+from collections import defaultdict
 import os
 import json
 import time
@@ -730,19 +731,78 @@ def update_stock(product_id):
 @login_required
 def revenue():
     try:
-        orders = [{'id': d.id, **d.to_dict()} for d in db.collection('orders').stream()]
-        total_revenue = sum(o.get('totalAmount', 0) for o in orders if o.get('status') == 'DELIVERED')
+        all_orders = [d for d in db.collection('orders').stream()]
+        orders_data = [{'id': d.id, **d.to_dict()} for d in all_orders]
+
+        # Filter orders by status
+        delivered_orders = [o for o in orders_data if o.get('status') == 'DELIVERED']
+        pending_orders = [o for o in orders_data if o.get('status') == 'PENDING']
         
+        # Calculate basic stats
+        total_revenue = sum(o.get('totalAmount', 0) for o in delivered_orders)
+        completed_revenue = total_revenue # Same as total_revenue for delivered
+        pending_revenue = sum(o.get('totalAmount', 0) for o in pending_orders)
+        delivered_count = len(delivered_orders)
+        avg_order_value = total_revenue / delivered_count if delivered_count > 0 else 0
+
+        # Daily Revenue (Last 30 Days)
+        daily_revenue = defaultdict(float)
+        today = datetime.now()
+        for i in range(30):
+            date = today - timedelta(days=i)
+            daily_revenue[date.strftime('%Y-%m-%d')] = 0.0 # Initialize for last 30 days
+
+        for order in delivered_orders:
+            if order.get('timestamp'):
+                ts = order['timestamp'] / 1000 if order['timestamp'] > 1e12 else order['timestamp']
+                order_date = datetime.fromtimestamp(ts)
+                date_str = order_date.strftime('%Y-%m-%d')
+                if date_str in daily_revenue:
+                    daily_revenue[date_str] += order.get('totalAmount', 0)
+        
+        # Sort daily revenue by date
+        sorted_daily_revenue = dict(sorted(daily_revenue.items()))
+
+        # Revenue by Status
+        revenue_by_status = defaultdict(float)
+        for order in orders_data: # Use all orders for status breakdown
+            status = order.get('status', 'UNKNOWN')
+            revenue_by_status[status] += order.get('totalAmount', 0)
+        
+        # Top Products by Revenue
+        product_revenue = defaultdict(float)
+        for order in delivered_orders:
+            for item in order.get('items', []): # Assuming 'items' is a list of product dicts
+                product_name = item.get('name', 'Unknown Product')
+                product_revenue[product_name] += item.get('price', 0) * item.get('quantity', 1)
+        
+        top_products = sorted(product_revenue.items(), key=lambda item: item[1], reverse=True)[:5] # Top 5
+
         data = {
             'total_revenue': total_revenue,
-            'orders': orders,
-            'delivered_count': len([o for o in orders if o.get('status') == 'DELIVERED'])
+            'completed_revenue': completed_revenue,
+            'pending_revenue': pending_revenue,
+            'avg_order_value': avg_order_value,
+            'delivered_count': delivered_count, # Keep for completeness, though not directly used in template stats cards
+            'daily_revenue': sorted_daily_revenue,
+            'revenue_by_status': dict(revenue_by_status),
+            'top_products': top_products
         }
         
-        return render_template('revenue.html', data=data, orders=orders)
+        return render_template('revenue.html', data=data, orders=orders_data) # Pass orders_data for any other potential use
     except Exception as e:
         app.logger.error(f"Revenue error: {e}")
-        return render_template('revenue.html', data={'total_revenue': 0, 'orders': [], 'delivered_count': 0}, orders=[])
+        return render_template('revenue.html', 
+                               data={
+                                   'total_revenue': 0, 
+                                   'completed_revenue': 0, 
+                                   'pending_revenue': 0, 
+                                   'avg_order_value': 0,
+                                   'daily_revenue': {},
+                                   'revenue_by_status': {},
+                                   'top_products': []
+                               }, 
+                               orders=[])
 
 @app.route('/analytics')
 @login_required
