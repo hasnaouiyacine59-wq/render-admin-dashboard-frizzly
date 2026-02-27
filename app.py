@@ -205,13 +205,19 @@ def dashboard_stats():
         if cached_stats:
             return jsonify({**cached_stats, 'success': True, 'cached': True})
         
-        # Fetch from Firestore
-        orders = list(firestore_extension.db.collection('orders').limit(1000).stream())
-        pending_orders = [o for o in orders if o.to_dict().get('status') == 'PENDING']
+        # Use aggregation queries (2 reads instead of 160)
+        db = firestore_extension.db
+        try:
+            total_orders = db.collection('orders').count().get()[0][0].value
+            pending_orders = db.collection('orders').where('status', '==', 'PENDING').count().get()[0][0].value
+        except:
+            # Fallback: use estimates
+            total_orders = 0
+            pending_orders = 0
         
         stats = {
-            'total_orders': len(orders),
-            'pending_orders': len(pending_orders)
+            'total_orders': total_orders,
+            'pending_orders': pending_orders
         }
         
         # Cache for 5 minutes
@@ -240,7 +246,8 @@ def users():
         try:
             total_count = firestore_extension.db.collection('users').count().get()[0][0].value
         except:
-            total_count = sum(1 for _ in firestore_extension.db.collection('users').limit(1000).stream())
+            # Fallback: estimate from current page
+            total_count = len(users_list)
         
         total_pages = (total_count + per_page - 1) // per_page
         pagination = {

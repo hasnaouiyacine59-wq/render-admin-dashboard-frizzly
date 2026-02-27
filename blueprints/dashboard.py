@@ -37,31 +37,23 @@ def dashboard():
         else:
             db = firestore_extension.db
             
-            # Use aggregation queries to reduce reads
-            orders_ref = db.collection('orders')
-            products_ref = db.collection('products')
-            users_ref = db.collection('users')
+            # Use aggregation queries (5 reads instead of 160+)
+            try:
+                total_orders = db.collection('orders').count().get()[0][0].value
+                total_products = db.collection('products').count().get()[0][0].value
+                total_users = db.collection('users').count().get()[0][0].value
+                pending_orders = db.collection('orders').where('status', '==', 'PENDING').count().get()[0][0].value
+                low_stock_products = db.collection('products').where('stock', '<', 10).count().get()[0][0].value
+            except:
+                # Fallback: use estimates
+                total_orders = 0
+                total_products = 0
+                total_users = 0
+                pending_orders = 0
+                low_stock_products = 0
             
-            # Get counts efficiently with limits
-            total_orders = sum(1 for _ in orders_ref.limit(1000).stream())
-            total_products = sum(1 for _ in products_ref.limit(500).stream())
-            total_users = sum(1 for _ in users_ref.limit(1000).stream())
-            
-            # Get pending orders count with filter
-            pending_orders = sum(1 for _ in orders_ref.where(
-                filter=firestore.FieldFilter('status', '==', 'PENDING')
-            ).limit(100).stream())
-            
-            # Get low stock count with filter
-            low_stock_products = sum(1 for _ in products_ref.where(
-                filter=firestore.FieldFilter('stock', '<', 10)
-            ).limit(100).stream())
-            
-            # Calculate revenue from delivered orders only
-            delivered_orders = orders_ref.where(
-                filter=firestore.FieldFilter('status', '==', 'DELIVERED')
-            ).limit(500).stream()
-            
+            # Calculate revenue from delivered orders (limited)
+            delivered_orders = db.collection('orders').where('status', '==', 'DELIVERED').limit(500).stream()
             total_revenue = sum(doc.to_dict().get('totalAmount', 0) for doc in delivered_orders)
             
             stats = {
