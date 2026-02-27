@@ -124,7 +124,6 @@ def edit_product(product_id):
         
         # Use cached categories
         categories = get_cached_categories()
-            categories.append(cat_data)
         
         return render_template('edit_product.html', product=product, categories=categories)
     except Exception as e:
