@@ -159,11 +159,6 @@ def bulk_update_status():
         order_ids = request.form.getlist('order_ids')
         new_status = request.form.get('status')
         
-        # Limit bulk operations
-        if len(order_ids) > 100:
-            flash('Cannot update more than 100 orders at once', 'error')
-            return redirect(url_for('orders.orders'))
-        
         for order_id in order_ids:
             # Update order status
             firestore_extension.db.collection('orders').document(order_id).update({'status': new_status})
@@ -180,9 +175,9 @@ def bulk_update_status():
         
         flash(f'Updated {len(order_ids)} orders', 'success')
     except Exception as e:
-        current_app.logger.error(f"Bulk update error: {e}") # Using current_app.logger
+        current_app.logger.error(f"Bulk update error: {e}")
         flash('Failed to update orders', 'error')
-    return redirect(url_for('orders.orders')) # Updated to blueprint
+    return redirect(url_for('orders.orders'))
 
 @orders_bp.route('/api/sync-orders', methods=['POST'])
 @login_required
