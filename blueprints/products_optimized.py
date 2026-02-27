@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from firebase_admin import firestore
 from extensions import firestore_extension
-from utils import admin_required, VALID_ORDER_STATUSES # VALID_ORDER_STATUSES might not be needed here
+from utils import admin_required
 
 products_bp = Blueprint('products', __name__)
 
@@ -15,6 +15,8 @@ def products():
         per_page = 50
         
         products_ref = firestore_extension.db.collection('products').order_by('createdAt', direction=firestore.Query.DESCENDING)
+        
+        # Pagination
         products_query = products_ref.limit(per_page).offset((page - 1) * per_page)
         products_list = [{'id': doc.id, **doc.to_dict()} for doc in products_query.stream()]
         
@@ -25,6 +27,7 @@ def products():
             total_count = sum(1 for _ in firestore_extension.db.collection('products').limit(1000).stream())
         
         total_pages = (total_count + per_page - 1) // per_page
+        
         pagination = {
             'page': page,
             'total_pages': total_pages,
@@ -64,7 +67,7 @@ def add_product():
             current_app.logger.error(f"Add product error: {e}")
             flash('Failed to add product', 'error')
     
-    # Fetch categories with limit
+    # Fetch categories (limited)
     categories = []
     try:
         for cat_doc in firestore_extension.db.collection('categories').limit(100).stream():
@@ -109,7 +112,7 @@ def edit_product(product_id):
         product = doc.to_dict()
         product['id'] = doc.id
         
-        # Fetch categories with limit
+        # Fetch categories (limited)
         categories = []
         for cat_doc in firestore_extension.db.collection('categories').limit(100).stream():
             cat_data = cat_doc.to_dict()
@@ -149,4 +152,4 @@ def update_stock(product_id):
     except Exception as e:
         current_app.logger.error(f"Update stock error: {e}")
         flash('Failed to update stock', 'error')
-    return redirect(url_for('products.products')) # Redirect to products list after stock update
+    return redirect(url_for('products.products'))

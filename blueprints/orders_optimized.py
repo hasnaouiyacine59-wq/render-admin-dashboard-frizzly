@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 import csv
 from io import StringIO
-from firebase_admin import firestore # Added firestore import
+from firebase_admin import firestore
 from extensions import firestore_extension
 from utils import admin_required, send_notification, VALID_ORDER_STATUSES
 
@@ -18,26 +18,33 @@ def orders():
         status_filter = request.args.get('status', 'all')
         
         orders_ref = firestore_extension.db.collection('orders')
+        
+        # Apply status filter
         if status_filter != 'all':
             orders_ref = orders_ref.where(filter=firestore.FieldFilter('status', '==', status_filter))
         
+        # Order by timestamp
         orders_ref = orders_ref.order_by('timestamp', direction=firestore.Query.DESCENDING)
+        
+        # Pagination with offset
         orders_query = orders_ref.limit(per_page).offset((page - 1) * per_page)
         orders_list = [{'id': doc.id, **doc.to_dict()} for doc in orders_query.stream()]
         
-        # Get total count
+        # Get total count (use aggregation if available)
         try:
             if status_filter != 'all':
                 total_count = firestore_extension.db.collection('orders').where('status', '==', status_filter).count().get()[0][0].value
             else:
                 total_count = firestore_extension.db.collection('orders').count().get()[0][0].value
         except:
+            # Fallback: limited count
             if status_filter != 'all':
                 total_count = sum(1 for _ in firestore_extension.db.collection('orders').where('status', '==', status_filter).limit(1000).stream())
             else:
                 total_count = sum(1 for _ in firestore_extension.db.collection('orders').limit(1000).stream())
         
         total_pages = (total_count + per_page - 1) // per_page
+        
         pagination = {
             'page': page,
             'total_pages': total_pages,
@@ -47,7 +54,11 @@ def orders():
             'next_num': page + 1
         }
         
-        return render_template('orders.html', orders=orders_list, status_filter=status_filter, valid_statuses=VALID_ORDER_STATUSES, pagination=pagination)
+        return render_template('orders.html', 
+                             orders=orders_list, 
+                             status_filter=status_filter, 
+                             valid_statuses=VALID_ORDER_STATUSES,
+                             pagination=pagination)
     except Exception as e:
         current_app.logger.error(f"Orders error: {e}")
         flash('Error loading orders', 'error')
@@ -62,12 +73,12 @@ def order_detail(order_id):
         doc = firestore_extension.db.collection('orders').document(order_id).get()
         if not doc.exists:
             flash('Order not found', 'error')
-            return redirect(url_for('orders.orders')) # Updated to blueprint
+            return redirect(url_for('orders.orders'))
         
         order = doc.to_dict()
         order['id'] = doc.id
         
-        # Get available drivers with limit
+        # Get available drivers (limited)
         drivers = []
         for d in firestore_extension.db.collection('drivers').where(filter=firestore.FieldFilter('status', '==', 'available')).limit(50).stream():
             driver_data = d.to_dict()
@@ -76,9 +87,9 @@ def order_detail(order_id):
         
         return render_template('order_detail.html', order=order, drivers=drivers, valid_statuses=VALID_ORDER_STATUSES)
     except Exception as e:
-        current_app.logger.error(f"Order detail error: {e}") # Using current_app.logger
+        current_app.logger.error(f"Order detail error: {e}")
         flash('Error loading order', 'error')
-        return redirect(url_for('orders.orders')) # Updated to blueprint
+        return redirect(url_for('orders.orders'))
 
 @orders_bp.route('/orders/<order_id>/update-status', methods=['POST'])
 @login_required
@@ -101,10 +112,10 @@ def update_order_status(order_id):
         
         flash('Order status updated', 'success')
     except Exception as e:
-        current_app.logger.error(f"Update status error: {e}") # Using current_app.logger
+        current_app.logger.error(f"Update status error: {e}")
         flash('Failed to update status', 'error')
     
-    return redirect(url_for('orders.order_detail', order_id=order_id)) # Updated to blueprint
+    return redirect(url_for('orders.order_detail', order_id=order_id))
 
 @orders_bp.route('/orders/export')
 @login_required
@@ -130,9 +141,9 @@ def export_orders():
         response.headers['Content-Disposition'] = 'attachment; filename=orders.csv'
         return response
     except Exception as e:
-        current_app.logger.error(f"Export orders error: {e}") # Using current_app.logger
+        current_app.logger.error(f"Export orders error: {e}")
         flash('Failed to export orders', 'error')
-        return redirect(url_for('orders.orders')) # Updated to blueprint
+        return redirect(url_for('orders.orders'))
 
 @orders_bp.route('/orders/<order_id>/assign-driver', methods=['POST'])
 @login_required
@@ -146,7 +157,7 @@ def assign_driver(order_id):
         })
         flash('Driver assigned successfully', 'success')
     except Exception as e:
-        current_app.logger.error(f"Assign driver error: {e}") # Using current_app.logger
+        current_app.logger.error(f"Assign driver error: {e}")
         flash('Failed to assign driver', 'error')
     return redirect(url_for('orders.order_detail', order_id=order_id))
 
@@ -164,7 +175,6 @@ def bulk_update_status():
             return redirect(url_for('orders.orders'))
         
         for order_id in order_ids:
-            # Update order status
             firestore_extension.db.collection('orders').document(order_id).update({'status': new_status})
             
             # Send notification to user
@@ -176,6 +186,6 @@ def bulk_update_status():
         
         flash(f'Updated {len(order_ids)} orders', 'success')
     except Exception as e:
-        current_app.logger.error(f"Bulk update error: {e}") # Using current_app.logger
+        current_app.logger.error(f"Bulk update error: {e}")
         flash('Failed to update orders', 'error')
-    return redirect(url_for('orders.orders')) # Updated to blueprint
+    return redirect(url_for('orders.orders'))

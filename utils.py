@@ -31,9 +31,9 @@ def admin_required(f):
     @wraps(f)
     @login_required
     def decorated_function(*args, **kwargs):
-        if not current_user.role == 'admin':
+        if not hasattr(current_user, 'role') or current_user.role != 'admin':
             flash('Admin access required', 'error')
-            return redirect(url_for('dashboard.dashboard'))
+            return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
     return decorated_function
 
