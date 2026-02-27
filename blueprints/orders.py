@@ -15,8 +15,6 @@ orders_bp = Blueprint('orders', __name__)
 @admin_required
 def orders():
     try:
-        page = request.args.get('page', 1, type=int)
-        per_page = 50
         status_filter = request.args.get('status', 'all')
         force_refresh = request.args.get('refresh', '0') == '1'
         
@@ -38,33 +36,20 @@ def orders():
         # Sort by timestamp (newest first)
         filtered_orders.sort(key=lambda x: x.get('timestamp', 0), reverse=True)
         
-        # Paginate
+        # Show all orders (no pagination)
+        orders_list = filtered_orders
         total_count = len(filtered_orders)
-        start_idx = (page - 1) * per_page
-        end_idx = start_idx + per_page
-        orders_list = filtered_orders[start_idx:end_idx]
-        
-        total_pages = (total_count + per_page - 1) // per_page
-        pagination = {
-            'page': page,
-            'total_pages': total_pages,
-            'has_prev': page > 1,
-            'has_next': page < total_pages,
-            'prev_num': page - 1,
-            'next_num': page + 1
-        }
         
         return render_template('orders.html', 
                              orders=orders_list, 
                              status_filter=status_filter, 
-                             valid_statuses=VALID_ORDER_STATUSES, 
-                             pagination=pagination,
+                             valid_statuses=VALID_ORDER_STATUSES,
+                             total_count=total_count,
                              total_cached=len(all_orders))
     except Exception as e:
         current_app.logger.error(f"Orders error: {e}")
         flash('Error loading orders', 'error')
-        pagination = {'page': 1, 'total_pages': 1, 'has_prev': False, 'has_next': False, 'prev_num': 1, 'next_num': 1}
-        return render_template('orders.html', orders=[], status_filter='all', valid_statuses=VALID_ORDER_STATUSES, pagination=pagination)
+        return render_template('orders.html', orders=[], status_filter='all', valid_statuses=VALID_ORDER_STATUSES, total_count=0)
 
 @orders_bp.route('/orders/<order_id>')
 @login_required
