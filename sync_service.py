@@ -1,27 +1,23 @@
 """
 Incremental sync service for Firestore collections
-Only fetches new/updated documents since last sync
+Uses session cache (works on Render.com ephemeral filesystem)
 """
 from firebase_admin import firestore
 from extensions import firestore_extension
-from persistent_cache import persistent_cache
+from session_cache import session_cache
 
 class IncrementalSync:
     
     @staticmethod
     def sync_orders():
         """
-        Sync orders incrementally:
-        1. Get last sync timestamp from cache
-        2. Fetch only orders newer than that timestamp
-        3. Merge with cached data
-        4. Return complete dataset
+        Sync orders incrementally using session cache
         """
         db = firestore_extension.db
         
-        # Get cached orders and last sync time
-        cached_orders = persistent_cache.get_collection('orders')
-        last_sync_timestamp = persistent_cache.get_last_sync_time('orders')
+        # Get cached orders and last sync time from session
+        cached_orders = session_cache.get_collection('orders')
+        last_sync_timestamp = session_cache.get_last_sync_time('orders')
         
         # First sync - load all orders (with limit)
         if last_sync_timestamp == 0:
@@ -38,8 +34,8 @@ class IncrementalSync:
             # Find latest timestamp
             latest_timestamp = max([o.get('timestamp', 0) for o in orders_dict.values()]) if orders_dict else 0
             
-            persistent_cache.save_collection('orders', orders_dict, latest_timestamp)
-            print(f"[SYNC] Cached {len(orders_dict)} orders, latest timestamp: {latest_timestamp}")
+            session_cache.save_collection('orders', orders_dict, latest_timestamp)
+            print(f"[SYNC] Cached {len(orders_dict)} orders in session, latest timestamp: {latest_timestamp}")
             return list(orders_dict.values())
         
         # Incremental sync - only fetch new/updated orders
@@ -55,7 +51,7 @@ class IncrementalSync:
                 new_orders.append(data)
             
             print(f"[SYNC] Found {len(new_orders)} new/updated orders")
-            updated_cache = persistent_cache.update_collection('orders', new_orders, [])
+            updated_cache = session_cache.update_collection('orders', new_orders, [])
             return list(updated_cache.values())
         else:
             print(f"[SYNC] No new orders since last sync")
@@ -63,11 +59,11 @@ class IncrementalSync:
     
     @staticmethod
     def sync_products():
-        """Sync products incrementally"""
+        """Sync products incrementally using session cache"""
         db = firestore_extension.db
         
-        cached_products = persistent_cache.get_collection('products')
-        last_sync_timestamp = persistent_cache.get_last_sync_time('products')
+        cached_products = session_cache.get_collection('products')
+        last_sync_timestamp = session_cache.get_last_sync_time('products')
         
         if last_sync_timestamp == 0:
             # First sync
@@ -82,7 +78,7 @@ class IncrementalSync:
             
             latest_timestamp = max([p.get('createdAt', {}).timestamp() * 1000 if hasattr(p.get('createdAt'), 'timestamp') else 0 for p in products_dict.values()]) if products_dict else 0
             
-            persistent_cache.save_collection('products', products_dict, latest_timestamp)
+            session_cache.save_collection('products', products_dict, latest_timestamp)
             return list(products_dict.values())
         
         # Incremental sync
@@ -96,7 +92,7 @@ class IncrementalSync:
                 data['id'] = doc.id
                 new_products.append(data)
             
-            updated_cache = persistent_cache.update_collection('products', new_products, [])
+            updated_cache = session_cache.update_collection('products', new_products, [])
             return list(updated_cache.values())
         else:
             return list(cached_products.values())
@@ -104,7 +100,7 @@ class IncrementalSync:
     @staticmethod
     def force_refresh(collection):
         """Force full refresh of a collection"""
-        persistent_cache.clear_collection(collection)
+        session_cache.clear_collection(collection)
         if collection == 'orders':
             return IncrementalSync.sync_orders()
         elif collection == 'products':
