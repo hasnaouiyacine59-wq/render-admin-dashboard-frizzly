@@ -5,6 +5,7 @@ from io import StringIO
 from firebase_admin import firestore # Added firestore import
 from extensions import firestore_extension
 from utils import admin_required, send_notification, VALID_ORDER_STATUSES
+from cache import cache
 
 orders_bp = Blueprint('orders', __name__)
 
@@ -16,6 +17,16 @@ def orders():
         page = request.args.get('page', 1, type=int)
         per_page = 50
         status_filter = request.args.get('status', 'all')
+        
+        # Check cache (2 minute TTL for orders list)
+        cache_key = f'orders:page_{page}:status_{status_filter}'
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return render_template('orders.html', 
+                                 orders=cached_data['orders'], 
+                                 status_filter=status_filter, 
+                                 valid_statuses=VALID_ORDER_STATUSES,
+                                 pagination=cached_data['pagination'])
         
         orders_ref = firestore_extension.db.collection('orders')
         if status_filter != 'all':
@@ -46,6 +57,9 @@ def orders():
             'prev_num': page - 1,
             'next_num': page + 1
         }
+        
+        # Cache for 2 minutes
+        cache.set(cache_key, {'orders': orders_list, 'pagination': pagination}, ttl_seconds=120)
         
         return render_template('orders.html', orders=orders_list, status_filter=status_filter, valid_statuses=VALID_ORDER_STATUSES, pagination=pagination)
     except Exception as e:
@@ -91,6 +105,10 @@ def update_order_status(order_id):
             'status': new_status,
             'updatedAt': firestore.SERVER_TIMESTAMP
         })
+        
+        # Invalidate cache when order status changes
+        cache.invalidate_pattern('dashboard_stats')
+        cache.invalidate_pattern('orders')
         
         # Send notification to user
         order_doc = firestore_extension.db.collection('orders').document(order_id).get()

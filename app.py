@@ -19,6 +19,7 @@ from extensions import login_manager, firestore_extension
 # New imports from utils
 from utils import User, admin_required, send_notification, VALID_ORDER_STATUSES
 from blueprints.auth import auth_bp # Import auth blueprint
+from cache import cache, cached
 
 app = Flask(__name__)
 app.secret_key = 'a-temporary-secret-key-for-development'
@@ -197,16 +198,26 @@ def stream_orders():
 @app.route('/api/dashboard-stats')
 @login_required
 def dashboard_stats():
-    """API endpoint for dashboard stats (for real-time updates)"""
+    """API endpoint for dashboard stats (cached)"""
     try:
-        orders = list(firestore_extension.db.collection('orders').stream())
+        # Check cache first (5 minute TTL)
+        cached_stats = cache.get('dashboard_stats')
+        if cached_stats:
+            return jsonify({**cached_stats, 'success': True, 'cached': True})
+        
+        # Fetch from Firestore
+        orders = list(firestore_extension.db.collection('orders').limit(1000).stream())
         pending_orders = [o for o in orders if o.to_dict().get('status') == 'PENDING']
         
-        return jsonify({
+        stats = {
             'total_orders': len(orders),
-            'pending_orders': len(pending_orders),
-            'success': True
-        })
+            'pending_orders': len(pending_orders)
+        }
+        
+        # Cache for 5 minutes
+        cache.set('dashboard_stats', stats, ttl_seconds=300)
+        
+        return jsonify({**stats, 'success': True, 'cached': False})
     except Exception as e:
         app.logger.error(f"Dashboard stats error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
