@@ -86,7 +86,6 @@ def add_product():
     
     # Use cached categories
     categories = get_cached_categories()
-        current_app.logger.error(f"Load categories error: {e}")
     
     return render_template('add_product.html', categories=categories)
 
