@@ -16,46 +16,39 @@ orders_bp = Blueprint('orders', __name__)
 def orders():
     try:
         status_filter = request.args.get('status', 'all')
-        force_refresh = request.args.get('refresh', '0') == '1'
+        last_doc_id = request.args.get('cursor')  # Cursor-based pagination
+        per_page = 50
         
-        # Force refresh if requested
-        if force_refresh:
-            sync_service.force_refresh('orders')
-            current_app.logger.info("[ORDERS] Force refresh triggered")
+        # Build query with server-side filtering
+        orders_ref = firestore_extension.db.collection('orders')
         
-        # Use incremental sync to get all orders (with error handling)
-        try:
-            all_orders = sync_service.sync_orders()
-            current_app.logger.info(f"[ORDERS] Loaded {len(all_orders)} orders from cache/sync")
-        except Exception as sync_error:
-            current_app.logger.error(f"[ORDERS] Sync failed: {sync_error}")
-            # Fallback: Direct query with limit
-            all_orders = []
-            for doc in firestore_extension.db.collection('orders').order_by('timestamp', direction=firestore.Query.DESCENDING).limit(200).stream():
-                data = doc.to_dict()
-                data['id'] = doc.id
-                all_orders.append(data)
-            current_app.logger.info(f"[ORDERS] Fallback loaded {len(all_orders)} orders")
-        
-        # Filter by status
         if status_filter != 'all':
-            filtered_orders = [o for o in all_orders if o.get('status') == status_filter]
-        else:
-            filtered_orders = all_orders
+            orders_ref = orders_ref.where('status', '==', status_filter)
         
-        # Sort by timestamp (newest first)
-        filtered_orders.sort(key=lambda x: x.get('timestamp', 0), reverse=True)
+        orders_ref = orders_ref.order_by('timestamp', direction=firestore.Query.DESCENDING)
         
-        # Show all orders (no pagination)
-        orders_list = filtered_orders
-        total_count = len(filtered_orders)
+        # Cursor-based pagination (efficient)
+        if last_doc_id:
+            last_doc = firestore_extension.db.collection('orders').document(last_doc_id).get()
+            if last_doc.exists:
+                orders_ref = orders_ref.start_after(last_doc)
+        
+        # Fetch one extra to check if there's a next page
+        docs = list(orders_ref.limit(per_page + 1).stream())
+        
+        has_next = len(docs) > per_page
+        if has_next:
+            docs = docs[:per_page]
+        
+        orders_list = [{'id': doc.id, **doc.to_dict()} for doc in docs]
+        next_cursor = docs[-1].id if docs and has_next else None
         
         return render_template('orders.html', 
                              orders=orders_list, 
                              status_filter=status_filter, 
                              valid_statuses=VALID_ORDER_STATUSES,
-                             total_count=total_count,
-                             total_cached=len(all_orders))
+                             next_cursor=next_cursor,
+                             has_next=has_next)
     except Exception as e:
         current_app.logger.error(f"Orders error: {e}")
         flash('Error loading orders', 'error')
@@ -93,16 +86,7 @@ def order_detail(order_id):
 def update_order_status(order_id):
     try:
         new_status = request.form.get('status')
-        
-        # Get order data BEFORE update (single read)
-        order_doc = firestore_extension.db.collection('orders').document(order_id).get()
-        
-        if not order_doc.exists:
-            flash('Order not found', 'error')
-            return redirect(url_for('orders.orders'))
-        
-        order_data = order_doc.to_dict()
-        user_id = order_data.get('userId')
+        user_id = request.form.get('user_id')  # Pass userId from form to avoid extra read
         
         # Update order status
         firestore_extension.db.collection('orders').document(order_id).update({
@@ -110,11 +94,7 @@ def update_order_status(order_id):
             'updatedAt': firestore.SERVER_TIMESTAMP
         })
         
-        # Invalidate cache
-        cache.invalidate_pattern('dashboard_stats')
-        cache.invalidate_pattern('orders')
-        
-        # Send notification using cached user_id
+        # Send notification using passed user_id (no extra read)
         if user_id:
             send_notification(user_id, 'Order Update', f'Your order status: {new_status}')
         
@@ -177,25 +157,32 @@ def bulk_update_status():
         order_ids = request.form.getlist('order_ids')
         new_status = request.form.get('status')
         
-        # Batch read all orders first (efficient)
-        orders_data = {}
-        for order_id in order_ids:
-            order_doc = firestore_extension.db.collection('orders').document(order_id).get()
-            if order_doc.exists:
-                orders_data[order_id] = order_doc.to_dict()
+        if not order_ids:
+            flash('No orders selected', 'error')
+            return redirect(url_for('orders.orders'))
         
-        # Batch update all orders
-        for order_id in order_ids:
-            firestore_extension.db.collection('orders').document(order_id).update({'status': new_status})
+        # Single query to get all orders (fix N+1 problem)
+        orders_ref = firestore_extension.db.collection('orders')
+        orders_query = orders_ref.where('__name__', 'in', order_ids[:10])  # Firestore 'in' limit is 10
         
-        # Send notifications using cached data (no extra reads)
-        for order_id, order_data in orders_data.items():
-            user_id = order_data.get('userId')
+        user_ids = {}
+        for doc in orders_query.stream():
+            user_ids[doc.id] = doc.to_dict().get('userId')
+        
+        # Batch write (efficient)
+        batch = firestore_extension.db.batch()
+        for order_id in order_ids:
+            ref = firestore_extension.db.collection('orders').document(order_id)
+            batch.update(ref, {
+                'status': new_status,
+                'updatedAt': firestore.SERVER_TIMESTAMP
+            })
+        batch.commit()
+        
+        # Send notifications using cached user_ids (no extra reads)
+        for order_id, user_id in user_ids.items():
             if user_id:
                 send_notification(user_id, 'Order Update', f'Your order status: {new_status}')
-        
-        # Clear local cache to force resync
-        sync_service.force_refresh('orders')
         
         flash(f'Updated {len(order_ids)} orders', 'success')
     except Exception as e:
