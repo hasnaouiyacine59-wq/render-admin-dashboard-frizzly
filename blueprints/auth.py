@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, session
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash
 from firebase_admin import firestore
