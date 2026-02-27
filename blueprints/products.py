@@ -2,43 +2,59 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from firebase_admin import firestore
 from extensions import firestore_extension
-from utils import admin_required, VALID_ORDER_STATUSES # VALID_ORDER_STATUSES might not be needed here
+from utils import admin_required
+from cache import cache
 
 products_bp = Blueprint('products', __name__)
+
+def get_cached_categories():
+    """Cache categories for 1 hour (they rarely change)"""
+    cached = cache.get('categories')
+    if cached:
+        return cached
+    
+    categories = []
+    for cat_doc in firestore_extension.db.collection('categories').limit(100).stream():
+        cat_data = cat_doc.to_dict()
+        cat_data['id'] = cat_doc.id
+        categories.append(cat_data)
+    
+    cache.set('categories', categories, ttl_seconds=3600)  # 1 hour
+    return categories
 
 @products_bp.route('/products')
 @login_required
 @admin_required
 def products():
     try:
-        page = request.args.get('page', 1, type=int)
+        last_doc_id = request.args.get('cursor')  # Cursor-based pagination
         per_page = 50
         
         products_ref = firestore_extension.db.collection('products').order_by('createdAt', direction=firestore.Query.DESCENDING)
-        products_query = products_ref.limit(per_page).offset((page - 1) * per_page)
-        products_list = [{'id': doc.id, **doc.to_dict()} for doc in products_query.stream()]
         
-        # Get total count
-        try:
-            total_count = firestore_extension.db.collection('products').count().get()[0][0].value
-        except:
-            total_count = sum(1 for _ in firestore_extension.db.collection('products').limit(1000).stream())
+        # Cursor-based pagination
+        if last_doc_id:
+            last_doc = firestore_extension.db.collection('products').document(last_doc_id).get()
+            if last_doc.exists:
+                products_ref = products_ref.start_after(last_doc)
         
-        total_pages = (total_count + per_page - 1) // per_page
-        pagination = {
-            'page': page,
-            'total_pages': total_pages,
-            'has_prev': page > 1,
-            'has_next': page < total_pages,
-            'prev_num': page - 1,
-            'next_num': page + 1
-        }
+        # Fetch one extra to check if there's a next page
+        docs = list(products_ref.limit(per_page + 1).stream())
         
-        return render_template('products.html', products=products_list, pagination=pagination)
+        has_next = len(docs) > per_page
+        if has_next:
+            docs = docs[:per_page]
+        
+        products_list = [{'id': doc.id, **doc.to_dict()} for doc in docs]
+        next_cursor = docs[-1].id if docs and has_next else None
+        
+        return render_template('products.html', 
+                             products=products_list, 
+                             next_cursor=next_cursor,
+                             has_next=has_next)
     except Exception as e:
         current_app.logger.error(f"Products error: {e}")
-        pagination = {'page': 1, 'total_pages': 1, 'has_prev': False, 'has_next': False, 'prev_num': 1, 'next_num': 1}
-        return render_template('products.html', products=[], pagination=pagination)
+        return render_template('products.html', products=[], next_cursor=None, has_next=False)
 
 @products_bp.route('/products/add', methods=['GET', 'POST'])
 @login_required
@@ -58,20 +74,18 @@ def add_product():
             }
             
             firestore_extension.db.collection('products').add(product_data)
+            
+            # Invalidate categories cache if new category added
+            cache.delete('categories')
+            
             flash('Product added successfully', 'success')
             return redirect(url_for('products.products'))
         except Exception as e:
             current_app.logger.error(f"Add product error: {e}")
             flash('Failed to add product', 'error')
     
-    # Fetch categories with limit
-    categories = []
-    try:
-        for cat_doc in firestore_extension.db.collection('categories').limit(100).stream():
-            cat_data = cat_doc.to_dict()
-            cat_data['id'] = cat_doc.id
-            categories.append(cat_data)
-    except Exception as e:
+    # Use cached categories
+    categories = get_cached_categories()
         current_app.logger.error(f"Load categories error: {e}")
     
     return render_template('add_product.html', categories=categories)
@@ -109,11 +123,8 @@ def edit_product(product_id):
         product = doc.to_dict()
         product['id'] = doc.id
         
-        # Fetch categories with limit
-        categories = []
-        for cat_doc in firestore_extension.db.collection('categories').limit(100).stream():
-            cat_data = cat_doc.to_dict()
-            cat_data['id'] = cat_doc.id
+        # Use cached categories
+        categories = get_cached_categories()
             categories.append(cat_data)
         
         return render_template('edit_product.html', product=product, categories=categories)
