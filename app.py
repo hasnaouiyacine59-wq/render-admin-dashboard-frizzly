@@ -453,28 +453,30 @@ def update_stock(product_id):
 @login_required
 def revenue():
     try:
+        # Check cache first (1 hour TTL for analytics)
+        cached_revenue = cache.get('revenue_data')
+        if cached_revenue:
+            return render_template('revenue.html', data=cached_revenue, orders=[])
+        
         # Limit to last 30 days and 500 orders
         thirty_days_ago = int((datetime.now() - timedelta(days=30)).timestamp() * 1000)
         all_orders = [d for d in firestore_extension.db.collection('orders').where('timestamp', '>=', thirty_days_ago).limit(500).stream()]
         orders_data = [{'id': d.id, **d.to_dict()} for d in all_orders]
 
-        # Filter orders by status
         delivered_orders = [o for o in orders_data if o.get('status') == 'DELIVERED']
         pending_orders = [o for o in orders_data if o.get('status') == 'PENDING']
         
-        # Calculate basic stats
         total_revenue = sum(o.get('totalAmount', 0) for o in delivered_orders)
-        completed_revenue = total_revenue # Same as total_revenue for delivered
+        completed_revenue = total_revenue
         pending_revenue = sum(o.get('totalAmount', 0) for o in pending_orders)
         delivered_count = len(delivered_orders)
         avg_order_value = total_revenue / delivered_count if delivered_count > 0 else 0
 
-        # Daily Revenue (Last 30 Days)
         daily_revenue = defaultdict(float)
         today = datetime.now()
         for i in range(30):
             date = today - timedelta(days=i)
-            daily_revenue[date.strftime('%Y-%m-%d')] = 0.0 # Initialize for last 30 days
+            daily_revenue[date.strftime('%Y-%m-%d')] = 0.0
 
         for order in delivered_orders:
             if order.get('timestamp'):
@@ -484,36 +486,36 @@ def revenue():
                 if date_str in daily_revenue:
                     daily_revenue[date_str] += order.get('totalAmount', 0)
         
-        # Sort daily revenue by date
         sorted_daily_revenue = dict(sorted(daily_revenue.items()))
 
-        # Revenue by Status
         revenue_by_status = defaultdict(float)
-        for order in orders_data: # Use all orders for status breakdown
+        for order in orders_data:
             status = order.get('status', 'UNKNOWN')
             revenue_by_status[status] += order.get('totalAmount', 0)
         
-        # Top Products by Revenue
         product_revenue = defaultdict(float)
         for order in delivered_orders:
-            for item in order.get('items', []): # Assuming 'items' is a list of product dicts
+            for item in order.get('items', []):
                 product_name = item.get('name', 'Unknown Product')
                 product_revenue[product_name] += item.get('price', 0) * item.get('quantity', 1)
         
-        top_products = sorted(product_revenue.items(), key=lambda item: item[1], reverse=True)[:5] # Top 5
+        top_products = sorted(product_revenue.items(), key=lambda item: item[1], reverse=True)[:5]
 
         data = {
             'total_revenue': total_revenue,
             'completed_revenue': completed_revenue,
             'pending_revenue': pending_revenue,
             'avg_order_value': avg_order_value,
-            'delivered_count': delivered_count, # Keep for completeness, though not directly used in template stats cards
+            'delivered_count': delivered_count,
             'daily_revenue': sorted_daily_revenue,
             'revenue_by_status': dict(revenue_by_status),
             'top_products': top_products
         }
         
-        return render_template('revenue.html', data=data, orders=orders_data) # Pass orders_data for any other potential use
+        # Cache for 1 hour
+        cache.set('revenue_data', data, ttl_seconds=3600)
+        
+        return render_template('revenue.html', data=data, orders=orders_data)
     except Exception as e:
         app.logger.error(f"Revenue error: {e}")
         return render_template('revenue.html', 
@@ -532,40 +534,44 @@ def revenue():
 @login_required
 def analytics():
     try:
+        # Check cache first (1 hour TTL)
+        cached_analytics = cache.get('analytics_data')
+        if cached_analytics:
+            return render_template('analytics.html', data=cached_analytics)
+        
         # Limit to 500 recent orders
         orders = [{'id': d.id, **d.to_dict()} for d in firestore_extension.db.collection('orders').limit(500).stream()]
         
-        # Calculate analytics
         status_counts = {}
-        monthly_revenue = {} # New calculation
+        monthly_revenue = {}
         
         for order in orders:
             status = order.get('status', 'UNKNOWN')
             status_counts[status] = status_counts.get(status, 0) + 1
 
-            # Calculate monthly revenue for DELIVERED orders
             if status == 'DELIVERED' and order.get('timestamp'):
-                # Convert timestamp to datetime object
                 ts = order['timestamp'] / 1000 if order['timestamp'] > 1e12 else order['timestamp']
                 order_date = datetime.fromtimestamp(ts)
-                month_year = order_date.strftime('%Y-%m') # e.g., "2026-02"
+                month_year = order_date.strftime('%Y-%m')
                 
                 monthly_revenue[month_year] = monthly_revenue.get(month_year, 0) + order.get('totalAmount', 0)
         
-        # Sort monthly revenue by month-year
         sorted_monthly_revenue = dict(sorted(monthly_revenue.items()))
 
         data = {
             'status_counts': status_counts,
             'total_orders': len(orders),
             'total_revenue': sum(o.get('totalAmount', 0) for o in orders if o.get('status') == 'DELIVERED'),
-            'monthly_revenue': sorted_monthly_revenue # Pass to template
+            'monthly_revenue': sorted_monthly_revenue
         }
+        
+        # Cache for 1 hour
+        cache.set('analytics_data', data, ttl_seconds=3600)
         
         return render_template('analytics.html', data=data)
     except Exception as e:
         app.logger.error(f"Analytics error: {e}")
-        return render_template('analytics.html', data={'status_counts': {}, 'total_orders': 0, 'total_revenue': 0, 'monthly_revenue': {}}) # Add default
+        return render_template('analytics.html', data={'status_counts': {}, 'total_orders': 0, 'total_revenue': 0, 'monthly_revenue': {}})
 
 @app.route('/notifications')
 @login_required

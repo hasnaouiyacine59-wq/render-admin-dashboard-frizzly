@@ -8,22 +8,12 @@ from datetime import datetime, timedelta
 dashboard_bp = Blueprint('dashboard', __name__)
 
 def get_cached_stats():
-    """Cache dashboard stats for 5 minutes"""
-    cache_key = 'dashboard_stats'
-    cache_time_key = 'dashboard_stats_time'
-    
-    # Check if cache is valid (less than 5 minutes old)
-    if cache_key in session and cache_time_key in session:
-        cache_age = datetime.now().timestamp() - session[cache_time_key]
-        if cache_age < 300:  # 5 minutes
-            return session[cache_key]
-    
-    return None
+    """Cache dashboard stats globally for 5 minutes"""
+    return cache.get('dashboard_stats_global')
 
 def set_cached_stats(stats):
-    """Store stats in session cache"""
-    session['dashboard_stats'] = stats
-    session['dashboard_stats_time'] = datetime.now().timestamp()
+    """Store stats in global cache"""
+    cache.set('dashboard_stats_global', stats, ttl_seconds=300)
 
 @dashboard_bp.route('/')
 @login_required
