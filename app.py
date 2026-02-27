@@ -14,7 +14,7 @@ import json
 import time
 import logging
 from logging.handlers import RotatingFileHandler
-from extensions import db, login_manager
+from extensions import login_manager, firestore_extension
 
 # New imports from utils
 from utils import User, admin_required, send_notification, VALID_ORDER_STATUSES
@@ -40,7 +40,7 @@ if not firebase_admin._apps:
     cred = credentials.Certificate(SERVICE_ACCOUNT_PATH)
     firebase_admin.initialize_app(cred)
 
-# db is now imported from extensions
+firestore_extension.init_app(app) # Initialize the Firestore extension
 
 # Custom Jinja2 filters
 @app.template_filter('timestamp_to_date')
