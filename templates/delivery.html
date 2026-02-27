@@ -61,7 +61,7 @@
                         <i class="bi bi-person-plus me-2"></i>Assign Driver
                     </button>
                     {% endif %}
-                    <a href="{{ url_for('order_detail', order_id=order.id) }}" class="btn btn-outline-secondary">
+                    <a href="{{ url_for('orders.order_detail', order_id=order.id) }}" class="btn btn-outline-secondary">
                         <i class="bi bi-eye me-2"></i>View Full Details
                     </a>
                 </div>
@@ -76,7 +76,7 @@
                         <h5 class="modal-title">Assign Driver - Order #{{ order.orderId[:8] }}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
-                    <form method="POST" action="{{ url_for('assign_driver', order_id=order.id) }}">
+                    <form method="POST" action="{{ url_for('orders.assign_driver', order_id=order.id) }}">
                         <div class="modal-body">
                             <div class="mb-3">
                                 <label class="form-label">Driver Name</label>

@@ -14,15 +14,15 @@ Traceback (most recent call last):
     {% extends "base.html" %}
   File "/home/oo33/AndroidStudioProjects/v.1.2/render-admin-dashboard-frizzly/templates/base.html", line 415, in top-level template code
     {% block content %}{% endblock %}
-  File "/home/oo33/AndroidStudioProjects/v.1.2/render-admin-dashboard-frizzly/templates/orders.html", line 121, in block 'content'
-    <form method="POST" action="{{ url_for('orders.bulk_update_status') }}" id="bulkForm">
+  File "/home/oo33/AndroidStudioProjects/v.1.2/render-admin-dashboard-frizzly/templates/orders.html", line 17, in block 'content'
+    <button class="btn btn-outline-success btn-sm" onclick="window.location.href='{{ url_for('orders.export_orders') }}'">
   File "/home/oo33/.local/lib/python3.8/site-packages/flask/app.py", line 1071, in url_for
     return self.handle_url_build_error(error, endpoint, values)
   File "/home/oo33/.local/lib/python3.8/site-packages/flask/app.py", line 1060, in url_for
     rv = url_adapter.build(  # type: ignore[union-attr]
   File "/home/oo33/.local/lib/python3.8/site-packages/werkzeug/routing/map.py", line 919, in build
     raise BuildError(endpoint, values, method, self)
-werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'bulk_update_status'. Did you mean 'orders.bulk_update_status' instead?
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'export_orders'. Did you mean 'orders.export_orders' instead?
 
 During handling of the above exception, another exception occurred:
 
@@ -55,12 +55,13 @@ Traceback (most recent call last):
     {% extends "base.html" %}
   File "/home/oo33/AndroidStudioProjects/v.1.2/render-admin-dashboard-frizzly/templates/base.html", line 415, in top-level template code
     {% block content %}{% endblock %}
-  File "/home/oo33/AndroidStudioProjects/v.1.2/render-admin-dashboard-frizzly/templates/orders.html", line 121, in block 'content'
-    <form method="POST" action="{{ url_for('orders.bulk_update_status') }}" id="bulkForm">
+  File "/home/oo33/AndroidStudioProjects/v.1.2/render-admin-dashboard-frizzly/templates/orders.html", line 17, in block 'content'
+    <button class="btn btn-outline-success btn-sm" onclick="window.location.href='{{ url_for('orders.export_orders') }}'">
   File "/home/oo33/.local/lib/python3.8/site-packages/flask/app.py", line 1071, in url_for
     return self.handle_url_build_error(error, endpoint, values)
   File "/home/oo33/.local/lib/python3.8/site-packages/flask/app.py", line 1060, in url_for
     rv = url_adapter.build(  # type: ignore[union-attr]
   File "/home/oo33/.local/lib/python3.8/site-packages/werkzeug/routing/map.py", line 919, in build
     raise BuildError(endpoint, values, method, self)
-werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'bulk_update_status'. Did you mean 'orders.bulk_update_status' instead?
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'export_orders'. Did you mean 'orders.export_orders' instead?
+Orders error: Could not build url for endpoint 'bulk_update_status'. Did you mean 'orders.bulk_update_status' instead?

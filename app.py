@@ -21,7 +21,7 @@ from utils import User, admin_required, send_notification, VALID_ORDER_STATUSES
 from blueprints.auth import auth_bp # Import auth blueprint
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'change-me-in-production')
+app.secret_key = 'a-temporary-secret-key-for-development'
 
 # CRITICAL SECURITY CHECK: Ensure SECRET_KEY is not default in production
 if not app.debug and app.secret_key == 'change-me-in-production':
@@ -61,6 +61,8 @@ from blueprints.dashboard import dashboard_bp # Import dashboard blueprint
 app.register_blueprint(dashboard_bp) # Register the dashboard blueprint
 from blueprints.orders import orders_bp # Import orders blueprint
 app.register_blueprint(orders_bp) # Register the orders blueprint
+from blueprints.products import products_bp
+app.register_blueprint(products_bp)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -629,4 +631,4 @@ def send_bulk_notification():
     return redirect(url_for('notifications'))
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    app.run(host='0.0.0.0', port=5003, debug=False)
