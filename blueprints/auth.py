@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash
-from extensions import db, login_manager
+from extensions import login_manager, firestore_extension
 from utils import User # New import for User
 
 auth_bp = Blueprint('auth', __name__)
@@ -16,7 +16,7 @@ def login():
         password = request.form.get('password')
         
         try:
-            admins = db.collection('admins').where('email', '==', email).limit(1).stream()
+            admins = firestore_extension.db.collection('admins').where('email', '==', email).limit(1).stream()
             admin_doc = next(admins, None)
             
             if admin_doc and check_password_hash(admin_doc.to_dict().get('password', ''), password):
@@ -41,7 +41,7 @@ def logout():
 # @login_manager.user_loader
 # def load_user(user_id):
 #     try:
-#         doc = db.collection('admins').document(user_id).get()
+#         doc = firestore_extension.db.collection('admins').document(user_id).get()
 #         if doc.exists:
 #             data = doc.to_dict()
 #             return User(user_id, data.get('email'), data.get('role', 'admin'))

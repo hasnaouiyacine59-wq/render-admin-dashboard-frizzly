@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from flask_login import login_required, current_user
 from firebase_admin import firestore
-from extensions import db # Assuming db is initialized in app.py
+from extensions import firestore_extension
 from utils import admin_required, VALID_ORDER_STATUSES # VALID_ORDER_STATUSES might not be needed here
 
 products_bp = Blueprint('products', __name__)
@@ -12,7 +12,7 @@ products_bp = Blueprint('products', __name__)
 def products():
     try:
         products_list = []
-        for doc in db.collection('products').stream():
+        for doc in firestore_extension.db.collection('products').stream():
             data = doc.to_dict()
             data['id'] = doc.id
             products_list.append(data)
@@ -41,7 +41,7 @@ def add_product():
                 'createdAt': firestore.SERVER_TIMESTAMP
             }
             
-            db.collection('products').add(product_data)
+            firestore_extension.db.collection('products').add(product_data)
             flash('Product added successfully', 'success')
             return redirect(url_for('products.products'))
         except Exception as e:
@@ -51,7 +51,7 @@ def add_product():
     # Fetch categories
     categories = []
     try:
-        for cat_doc in db.collection('categories').stream():
+        for cat_doc in firestore_extension.db.collection('categories').stream():
             cat_data = cat_doc.to_dict()
             cat_data['id'] = cat_doc.id
             categories.append(cat_data)
@@ -77,7 +77,7 @@ def edit_product(product_id):
                 'updatedAt': firestore.SERVER_TIMESTAMP
             }
             
-            db.collection('products').document(product_id).update(product_data)
+            firestore_extension.db.collection('products').document(product_id).update(product_data)
             flash('Product updated successfully', 'success')
             return redirect(url_for('products.products'))
         except Exception as e:
@@ -85,7 +85,7 @@ def edit_product(product_id):
             flash('Failed to update product', 'error')
     
     try:
-        doc = db.collection('products').document(product_id).get()
+        doc = firestore_extension.db.collection('products').document(product_id).get()
         if not doc.exists:
             flash('Product not found', 'error')
             return redirect(url_for('products.products'))
@@ -95,7 +95,7 @@ def edit_product(product_id):
         
         # Fetch categories
         categories = []
-        for cat_doc in db.collection('categories').stream():
+        for cat_doc in firestore_extension.db.collection('categories').stream():
             cat_data = cat_doc.to_dict()
             cat_data['id'] = cat_doc.id
             categories.append(cat_data)
@@ -111,7 +111,7 @@ def edit_product(product_id):
 @admin_required
 def delete_product(product_id):
     try:
-        db.collection('products').document(product_id).delete()
+        firestore_extension.db.collection('products').document(product_id).delete()
         flash('Product deleted successfully', 'success')
     except Exception as e:
         current_app.logger.error(f"Delete product error: {e}")
@@ -125,7 +125,7 @@ def delete_product(product_id):
 def update_stock(product_id):
     try:
         new_stock = int(request.form.get('stock', 0))
-        db.collection('products').document(product_id).update({
+        firestore_extension.db.collection('products').document(product_id).update({
             'stock': new_stock,
             'updatedAt': firestore.SERVER_TIMESTAMP
         })

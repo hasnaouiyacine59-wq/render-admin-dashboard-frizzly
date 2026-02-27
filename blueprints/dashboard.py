@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
-from extensions import db # Assuming db is initialized in app.py
+from extensions import firestore_extension
 from utils import admin_required, User # Assuming User is in utils.py
 
 dashboard_bp = Blueprint('dashboard', __name__)
@@ -11,9 +11,9 @@ dashboard_bp = Blueprint('dashboard', __name__)
 def dashboard():
     try:
         # Get counts
-        orders = list(db.collection('orders').stream())
-        products = list(db.collection('products').stream())
-        users = list(db.collection('users').stream())
+        orders = list(firestore_extension.db.collection('orders').stream())
+        products = list(firestore_extension.db.collection('products').stream())
+        users = list(firestore_extension.db.collection('users').stream())
         
         pending_orders = [o for o in orders if o.to_dict().get('status') == 'PENDING']
         low_stock = [p for p in products if p.to_dict().get('stock', 0) < 10]

@@ -65,7 +65,7 @@ app.register_blueprint(orders_bp) # Register the orders blueprint
 @login_manager.user_loader
 def load_user(user_id):
     try:
-        doc = db.collection('admins').document(user_id).get()
+        doc = firestore_extension.db.collection('admins').document(user_id).get()
         if doc.exists:
             data = doc.to_dict()
             return User(user_id, data.get('email'), data.get('role', 'admin'))
@@ -80,7 +80,7 @@ def inject_stats():
     """Inject order stats into all templates"""
     if current_user.is_authenticated:
         try:
-            orders = list(db.collection('orders').stream())
+            orders = list(firestore_extension.db.collection('orders').stream())
             stats = {
                 'total_orders': len(orders),
                 'pending_orders': sum(1 for o in orders if o.to_dict().get('status') == 'PENDING'),
@@ -108,7 +108,7 @@ def save_fcm_token():
         token = data.get('token')
         
         if token:
-            db.collection('admins').document(current_user.id).update({
+            firestore_extension.db.collection('admins').document(current_user.id).update({
                 'fcmToken': token,
                 'fcmTokenUpdated': firestore.SERVER_TIMESTAMP
             })
@@ -166,7 +166,7 @@ def stream_orders():
     
     # Start Firestore listener - order by timestamp to catch new orders
     app.logger.info("SSE: Starting Firestore listener")
-    col_query = db.collection('orders').order_by('timestamp', direction=firestore.Query.DESCENDING).limit(50)
+    col_query = firestore_extension.db.collection('orders').order_by('timestamp', direction=firestore.Query.DESCENDING).limit(50)
     doc_watch = col_query.on_snapshot(on_snapshot)
     
     def generate():
@@ -203,7 +203,7 @@ def stream_orders():
 def dashboard_stats():
     """API endpoint for dashboard stats (for real-time updates)"""
     try:
-        orders = list(db.collection('orders').stream())
+        orders = list(firestore_extension.db.collection('orders').stream())
         pending_orders = [o for o in orders if o.to_dict().get('status') == 'PENDING']
         
         return jsonify({
@@ -224,7 +224,7 @@ def dashboard_stats():
 def users():
     try:
         users_list = []
-        for doc in db.collection('users').stream():
+        for doc in firestore_extension.db.collection('users').stream():
             data = doc.to_dict()
             data['id'] = doc.id
             users_list.append(data)
@@ -240,7 +240,7 @@ def users():
 @login_required
 def user_detail(user_id):
     try:
-        doc = db.collection('users').document(user_id).get()
+        doc = firestore_extension.db.collection('users').document(user_id).get()
         if not doc.exists:
             flash('User not found', 'error')
             return redirect(url_for('orders.orders'))
@@ -250,7 +250,7 @@ def user_detail(user_id):
         
         # Fetch user's orders
         orders = []
-        for order_doc in db.collection('orders').where('userId', '==', user_id).stream():
+        for order_doc in firestore_extension.db.collection('orders').where('userId', '==', user_id).stream():
             order_data = order_doc.to_dict()
             order_data['id'] = order_doc.id
             orders.append(order_data)
@@ -271,7 +271,7 @@ def user_detail(user_id):
 def delivery_logistics():
     try:
         orders = []
-        for doc in db.collection('orders').where('status', 'in', ['ON_WAY', 'OUT_FOR_DELIVERY']).stream():
+        for doc in firestore_extension.db.collection('orders').where('status', 'in', ['ON_WAY', 'OUT_FOR_DELIVERY']).stream():
             data = doc.to_dict()
             data['id'] = doc.id
             orders.append(data)
@@ -286,7 +286,7 @@ def delivery_logistics():
 def drivers():
     try:
         drivers_list = []
-        for doc in db.collection('drivers').stream():
+        for doc in firestore_extension.db.collection('drivers').stream():
             data = doc.to_dict()
             data['id'] = doc.id
             drivers_list.append(data)
@@ -317,7 +317,7 @@ def add_driver():
                 'status': 'available',
                 'createdAt': firestore.SERVER_TIMESTAMP
             }
-            db.collection('drivers').add(driver_data)
+            firestore_extension.db.collection('drivers').add(driver_data)
             flash('Driver added successfully', 'success')
             return redirect(url_for('drivers'))
         except Exception as e:
@@ -330,7 +330,7 @@ def add_driver():
 @login_required
 def driver_detail(driver_id):
     try:
-        doc = db.collection('drivers').document(driver_id).get()
+        doc = firestore_extension.db.collection('drivers').document(driver_id).get()
         if not doc.exists:
             flash('Driver not found', 'error')
             return redirect(url_for('drivers'))
@@ -355,7 +355,7 @@ def edit_driver(driver_id):
                 'status': request.form.get('status'),
                 'updatedAt': firestore.SERVER_TIMESTAMP
             }
-            db.collection('drivers').document(driver_id).update(driver_data)
+            firestore_extension.db.collection('drivers').document(driver_id).update(driver_data)
             flash('Driver updated successfully', 'success')
             return redirect(url_for('drivers'))
         except Exception as e:
@@ -363,7 +363,7 @@ def edit_driver(driver_id):
             flash('Failed to update driver', 'error')
     
     try:
-        doc = db.collection('drivers').document(driver_id).get()
+        doc = firestore_extension.db.collection('drivers').document(driver_id).get()
         if not doc.exists:
             flash('Driver not found', 'error')
             return redirect(url_for('drivers'))
@@ -379,7 +379,7 @@ def edit_driver(driver_id):
 @login_required
 def delete_driver(driver_id):
     try:
-        db.collection('drivers').document(driver_id).delete()
+        firestore_extension.db.collection('drivers').document(driver_id).delete()
         flash('Driver deleted successfully', 'success')
     except Exception as e:
         app.logger.error(f"Delete driver error: {e}")
@@ -393,7 +393,7 @@ def delete_driver(driver_id):
 def stock_management():
     try:
         products = []
-        for doc in db.collection('products').stream():
+        for doc in firestore_extension.db.collection('products').stream():
             data = doc.to_dict()
             data['id'] = doc.id
             products.append(data)
@@ -408,7 +408,7 @@ def stock_management():
 def update_stock(product_id):
     try:
         new_stock = int(request.form.get('stock', 0))
-        db.collection('products').document(product_id).update({
+        firestore_extension.db.collection('products').document(product_id).update({
             'stock': new_stock,
             'updatedAt': firestore.SERVER_TIMESTAMP
         })
@@ -424,7 +424,7 @@ def update_stock(product_id):
 @login_required
 def revenue():
     try:
-        all_orders = [d for d in db.collection('orders').stream()]
+        all_orders = [d for d in firestore_extension.db.collection('orders').stream()]
         orders_data = [{'id': d.id, **d.to_dict()} for d in all_orders]
 
         # Filter orders by status
@@ -501,7 +501,7 @@ def revenue():
 @login_required
 def analytics():
     try:
-        orders = [{'id': d.id, **d.to_dict()} for d in db.collection('orders').stream()]
+        orders = [{'id': d.id, **d.to_dict()} for d in firestore_extension.db.collection('orders').stream()]
         
         # Calculate analytics
         status_counts = {}
@@ -549,7 +549,7 @@ def send_test_notification():
         body = request.form.get('body', 'This is a test notification')
         
         # Get user and send notification
-        user_doc = db.collection('users').document(user_id).get()
+        user_doc = firestore_extension.db.collection('users').document(user_id).get()
         if user_doc.exists and user_doc.to_dict().get('fcmToken'):
             fcm_token = user_doc.to_dict()['fcmToken']
             # Use data-only message to trigger onMessageReceived in background
@@ -576,7 +576,7 @@ def send_test_notification():
 def activity_logs():
     try:
         logs = []
-        for doc in db.collection('activity_logs').limit(100).stream():
+        for doc in firestore_extension.db.collection('activity_logs').limit(100).stream():
             data = doc.to_dict()
             data['id'] = doc.id
             logs.append(data)
@@ -615,7 +615,7 @@ def send_bulk_notification():
     try:
         title = request.form.get('title')
         body = request.form.get('body')
-        users = db.collection('users').stream()
+        users = firestore_extension.db.collection('users').stream()
         count = 0
         for user_doc in users:
             user_data = user_doc.to_dict()

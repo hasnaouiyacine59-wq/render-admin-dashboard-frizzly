@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 import csv
 from io import StringIO
 from firebase_admin import firestore # Added firestore import
-from extensions import db # Assuming db is initialized in app.py
+from extensions import firestore_extension
 from utils import admin_required, send_notification, VALID_ORDER_STATUSES
 
 orders_bp = Blueprint('orders', __name__)
@@ -15,7 +15,7 @@ def orders():
     try:
         status_filter = request.args.get('status', 'all')
         
-        orders_ref = db.collection('orders')
+        orders_ref = firestore_extension.db.collection('orders')
         if status_filter != 'all':
             orders_query = orders_ref.where('status', '==', status_filter)
         else:
@@ -40,7 +40,7 @@ def orders():
 @admin_required
 def order_detail(order_id):
     try:
-        doc = db.collection('orders').document(order_id).get()
+        doc = firestore_extension.db.collection('orders').document(order_id).get()
         if not doc.exists:
             flash('Order not found', 'error')
             return redirect(url_for('orders.orders')) # Updated to blueprint
@@ -50,7 +50,7 @@ def order_detail(order_id):
         
         # Get available drivers
         drivers = []
-        for d in db.collection('drivers').where('status', '==', 'available').stream():
+        for d in firestore_extension.db.collection('drivers').where('status', '==', 'available').stream():
             driver_data = d.to_dict()
             driver_data['id'] = d.id
             drivers.append(driver_data)
@@ -68,13 +68,13 @@ def update_order_status(order_id):
     try:
         new_status = request.form.get('status')
         
-        db.collection('orders').document(order_id).update({
+        firestore_extension.db.collection('orders').document(order_id).update({
             'status': new_status,
             'updatedAt': firestore.SERVER_TIMESTAMP
         })
         
         # Send notification to user
-        order_doc = db.collection('orders').document(order_id).get()
+        order_doc = firestore_extension.db.collection('orders').document(order_id).get()
         if order_doc.exists:
             user_id = order_doc.to_dict().get('userId')
             if user_id:
@@ -93,7 +93,7 @@ def update_order_status(order_id):
 def export_orders():
     """Export orders to CSV"""
     try:
-        orders = [doc.to_dict() for doc in db.collection('orders').stream()]
+        orders = [doc.to_dict() for doc in firestore_extension.db.collection('orders').stream()]
         
         output = StringIO()
         writer = csv.DictWriter(output, fieldnames=['id', 'orderId', 'status', 'totalAmount', 'timestamp'])
@@ -121,7 +121,7 @@ def export_orders():
 def assign_driver(order_id):
     try:
         driver_id = request.form.get('driver_id')
-        db.collection('orders').document(order_id).update({
+        firestore_extension.db.collection('orders').document(order_id).update({
             'driverId': driver_id,
             'updatedAt': firestore.SERVER_TIMESTAMP
         })
@@ -141,10 +141,10 @@ def bulk_update_status():
         
         for order_id in order_ids:
             # Update order status
-            db.collection('orders').document(order_id).update({'status': new_status})
+            firestore_extension.db.collection('orders').document(order_id).update({'status': new_status})
             
             # Send notification to user
-            order_doc = db.collection('orders').document(order_id).get()
+            order_doc = firestore_extension.db.collection('orders').document(order_id).get()
             if order_doc.exists:
                 user_id = order_doc.to_dict().get('userId')
                 if user_id:
