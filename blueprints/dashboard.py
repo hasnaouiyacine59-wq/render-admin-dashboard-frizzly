@@ -42,9 +42,15 @@ def dashboard():
                 pending_orders = 0
                 low_stock_products = 0
             
-            # Calculate revenue from delivered orders (limited)
-            delivered_orders = db.collection('orders').where('status', '==', 'DELIVERED').limit(500).stream()
-            total_revenue = sum(doc.to_dict().get('totalAmount', 0) for doc in delivered_orders)
+            # Calculate revenue using server-side aggregation (1 read instead of 500)
+            try:
+                from firebase_admin.firestore import aggregation
+                delivered_query = db.collection('orders').where('status', '==', 'DELIVERED')
+                total_revenue = delivered_query.sum('totalAmount').get()[0][0].value
+            except:
+                # Fallback: limited query
+                delivered_orders = db.collection('orders').where('status', '==', 'DELIVERED').limit(500).stream()
+                total_revenue = sum(doc.to_dict().get('totalAmount', 0) for doc in delivered_orders)
             
             stats = {
                 'total_orders': total_orders,

@@ -155,19 +155,12 @@ def assign_driver(order_id):
 def bulk_update_status():
     try:
         order_ids = request.form.getlist('order_ids')
+        user_ids = request.form.getlist('user_ids')  # Get userIds from frontend
         new_status = request.form.get('status')
         
         if not order_ids:
             flash('No orders selected', 'error')
             return redirect(url_for('orders.orders'))
-        
-        # Single query to get all orders (fix N+1 problem)
-        orders_ref = firestore_extension.db.collection('orders')
-        orders_query = orders_ref.where('__name__', 'in', order_ids[:10])  # Firestore 'in' limit is 10
-        
-        user_ids = {}
-        for doc in orders_query.stream():
-            user_ids[doc.id] = doc.to_dict().get('userId')
         
         # Batch write (efficient)
         batch = firestore_extension.db.batch()
@@ -179,10 +172,10 @@ def bulk_update_status():
             })
         batch.commit()
         
-        # Send notifications using cached user_ids (no extra reads)
-        for order_id, user_id in user_ids.items():
-            if user_id:
-                send_notification(user_id, 'Order Update', f'Your order status: {new_status}')
+        # Send notifications using passed user_ids (no extra reads)
+        for i, order_id in enumerate(order_ids):
+            if i < len(user_ids) and user_ids[i]:
+                send_notification(user_ids[i], 'Order Update', f'Your order status: {new_status}')
         
         flash(f'Updated {len(order_ids)} orders', 'success')
     except Exception as e:
