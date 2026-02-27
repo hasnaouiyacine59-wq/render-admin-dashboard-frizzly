@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, Response, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, Response, current_app, jsonify
 from flask_login import login_required, current_user
 import csv
 from io import StringIO
@@ -6,6 +6,7 @@ from firebase_admin import firestore # Added firestore import
 from extensions import firestore_extension
 from utils import admin_required, send_notification, VALID_ORDER_STATUSES
 from cache import cache
+from sync_service import sync_service
 
 orders_bp = Blueprint('orders', __name__)
 
@@ -17,36 +18,31 @@ def orders():
         page = request.args.get('page', 1, type=int)
         per_page = 50
         status_filter = request.args.get('status', 'all')
+        force_refresh = request.args.get('refresh', '0') == '1'
         
-        # Check cache (2 minute TTL for orders list)
-        cache_key = f'orders:page_{page}:status_{status_filter}'
-        cached_data = cache.get(cache_key)
-        if cached_data:
-            return render_template('orders.html', 
-                                 orders=cached_data['orders'], 
-                                 status_filter=status_filter, 
-                                 valid_statuses=VALID_ORDER_STATUSES,
-                                 pagination=cached_data['pagination'])
+        # Force refresh if requested
+        if force_refresh:
+            sync_service.force_refresh('orders')
+            current_app.logger.info("[ORDERS] Force refresh triggered")
         
-        orders_ref = firestore_extension.db.collection('orders')
+        # Use incremental sync to get all orders
+        all_orders = sync_service.sync_orders()
+        current_app.logger.info(f"[ORDERS] Loaded {len(all_orders)} orders from cache/sync")
+        
+        # Filter by status
         if status_filter != 'all':
-            orders_ref = orders_ref.where(filter=firestore.FieldFilter('status', '==', status_filter))
+            filtered_orders = [o for o in all_orders if o.get('status') == status_filter]
+        else:
+            filtered_orders = all_orders
         
-        orders_ref = orders_ref.order_by('timestamp', direction=firestore.Query.DESCENDING)
-        orders_query = orders_ref.limit(per_page).offset((page - 1) * per_page)
-        orders_list = [{'id': doc.id, **doc.to_dict()} for doc in orders_query.stream()]
+        # Sort by timestamp (newest first)
+        filtered_orders.sort(key=lambda x: x.get('timestamp', 0), reverse=True)
         
-        # Get total count
-        try:
-            if status_filter != 'all':
-                total_count = firestore_extension.db.collection('orders').where('status', '==', status_filter).count().get()[0][0].value
-            else:
-                total_count = firestore_extension.db.collection('orders').count().get()[0][0].value
-        except:
-            if status_filter != 'all':
-                total_count = sum(1 for _ in firestore_extension.db.collection('orders').where('status', '==', status_filter).limit(1000).stream())
-            else:
-                total_count = sum(1 for _ in firestore_extension.db.collection('orders').limit(1000).stream())
+        # Paginate
+        total_count = len(filtered_orders)
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        orders_list = filtered_orders[start_idx:end_idx]
         
         total_pages = (total_count + per_page - 1) // per_page
         pagination = {
@@ -58,10 +54,12 @@ def orders():
             'next_num': page + 1
         }
         
-        # Cache for 2 minutes
-        cache.set(cache_key, {'orders': orders_list, 'pagination': pagination}, ttl_seconds=120)
-        
-        return render_template('orders.html', orders=orders_list, status_filter=status_filter, valid_statuses=VALID_ORDER_STATUSES, pagination=pagination)
+        return render_template('orders.html', 
+                             orders=orders_list, 
+                             status_filter=status_filter, 
+                             valid_statuses=VALID_ORDER_STATUSES, 
+                             pagination=pagination,
+                             total_cached=len(all_orders))
     except Exception as e:
         current_app.logger.error(f"Orders error: {e}")
         flash('Error loading orders', 'error')
@@ -192,8 +190,27 @@ def bulk_update_status():
                 if user_id:
                     send_notification(user_id, 'Order Update', f'Your order status: {new_status}')
         
+        # Clear local cache to force resync
+        sync_service.force_refresh('orders')
+        
         flash(f'Updated {len(order_ids)} orders', 'success')
     except Exception as e:
         current_app.logger.error(f"Bulk update error: {e}") # Using current_app.logger
         flash('Failed to update orders', 'error')
     return redirect(url_for('orders.orders')) # Updated to blueprint
+
+@orders_bp.route('/api/sync-orders', methods=['POST'])
+@login_required
+@admin_required
+def sync_orders_api():
+    """API endpoint to manually trigger order sync"""
+    try:
+        orders = sync_service.sync_orders()
+        return jsonify({
+            'success': True,
+            'total_orders': len(orders),
+            'message': 'Orders synced successfully'
+        })
+    except Exception as e:
+        current_app.logger.error(f"Sync error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
