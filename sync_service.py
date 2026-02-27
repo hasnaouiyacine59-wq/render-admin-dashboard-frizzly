@@ -19,11 +19,19 @@ class IncrementalSync:
         cached_orders = session_cache.get_collection('orders')
         last_sync_timestamp = session_cache.get_last_sync_time('orders')
         
-        # First sync - load all orders (with limit)
+        # First sync - load orders with REDUCED limit for session
         if last_sync_timestamp == 0:
-            print(f"[SYNC] First sync - loading all orders (limited to 1000)")
-            orders_query = db.collection('orders').order_by('timestamp', direction=firestore.Query.DESCENDING).limit(1000)
-            docs = list(orders_query.stream())
+            print(f"[SYNC] First sync - loading orders (limited to 200 for session)")
+            orders_query = db.collection('orders').order_by('timestamp', direction=firestore.Query.DESCENDING).limit(200)
+            
+            # Add timeout to prevent hanging
+            docs = []
+            try:
+                for doc in orders_query.stream(timeout=10.0):
+                    docs.append(doc)
+            except Exception as e:
+                print(f"[SYNC] Error during stream: {e}")
+                return []
             
             orders_dict = {}
             for doc in docs:
@@ -41,7 +49,12 @@ class IncrementalSync:
         # Incremental sync - only fetch new/updated orders
         print(f"[SYNC] Incremental sync from timestamp: {last_sync_timestamp}")
         new_orders_query = db.collection('orders').where('timestamp', '>', last_sync_timestamp).order_by('timestamp', direction=firestore.Query.DESCENDING)
-        new_docs = list(new_orders_query.stream())
+        
+        try:
+            new_docs = list(new_orders_query.stream(timeout=5.0))
+        except Exception as e:
+            print(f"[SYNC] Error during incremental sync: {e}")
+            return list(cached_orders.values())
         
         if new_docs:
             new_orders = []
