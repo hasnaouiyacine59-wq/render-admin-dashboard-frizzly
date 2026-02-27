@@ -14,10 +14,11 @@ import json
 import time
 import logging
 from logging.handlers import RotatingFileHandler
+from extensions import db, login_manager
 
 # New imports from utils
-from .utils import User, admin_required, send_notification, VALID_ORDER_STATUSES
-from .blueprints.auth import auth_bp # Import auth blueprint
+from utils import User, admin_required, send_notification, VALID_ORDER_STATUSES
+from blueprints.auth import auth_bp # Import auth blueprint
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'change-me-in-production')
@@ -39,7 +40,7 @@ if not firebase_admin._apps:
     cred = credentials.Certificate(SERVICE_ACCOUNT_PATH)
     firebase_admin.initialize_app(cred)
 
-db = firestore.client()
+# db is now imported from extensions
 
 # Custom Jinja2 filters
 @app.template_filter('timestamp_to_date')
@@ -54,13 +55,11 @@ def timestamp_to_date(timestamp):
     return 'N/A'
 
 # Flask-Login setup
-login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'auth.login' # Update login_view to blueprint
 app.register_blueprint(auth_bp) # Register the auth blueprint
-from .blueprints.dashboard import dashboard_bp # Import dashboard blueprint
+from blueprints.dashboard import dashboard_bp # Import dashboard blueprint
 app.register_blueprint(dashboard_bp) # Register the dashboard blueprint
-from .blueprints.orders import orders_bp # Import orders blueprint
+from blueprints.orders import orders_bp # Import orders blueprint
 app.register_blueprint(orders_bp) # Register the orders blueprint
 
 @login_manager.user_loader

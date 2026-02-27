@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
-from ..app import db # Assuming db is initialized in app.py
-from ..utils import admin_required, User # Assuming User is in utils.py
+from extensions import db # Assuming db is initialized in app.py
+from utils import admin_required, User # Assuming User is in utils.py
 
 dashboard_bp = Blueprint('dashboard', __name__)
 

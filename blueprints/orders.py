@@ -3,8 +3,8 @@ from flask_login import login_required, current_user
 import csv
 from io import StringIO
 from firebase_admin import firestore # Added firestore import
-from ..app import db # Assuming db is initialized in app.py
-from ..utils import admin_required, send_notification, VALID_ORDER_STATUSES
+from extensions import db # Assuming db is initialized in app.py
+from utils import admin_required, send_notification, VALID_ORDER_STATUSES
 
 orders_bp = Blueprint('orders', __name__)
 

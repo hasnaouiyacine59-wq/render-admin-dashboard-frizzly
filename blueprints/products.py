@@ -1,8 +1,8 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from flask_login import login_required, current_user
 from firebase_admin import firestore
-from ..app import db # Assuming db is initialized in app.py
-from ..utils import admin_required, VALID_ORDER_STATUSES # VALID_ORDER_STATUSES might not be needed here
+from extensions import db # Assuming db is initialized in app.py
+from utils import admin_required, VALID_ORDER_STATUSES # VALID_ORDER_STATUSES might not be needed here
 
 products_bp = Blueprint('products', __name__)
 
