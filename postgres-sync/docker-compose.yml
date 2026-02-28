@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: frizzly-postgres
+    environment:
+      POSTGRES_DB: frizzly
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: frizzly2026secure
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d frizzly"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  sync-service:
+    build: .
+    container_name: frizzly-sync
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: frizzly
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: frizzly2026secure
+      FIREBASE_CREDENTIALS: /app/serviceAccountKey.json
+    volumes:
+      - ../serviceAccountKey.json:/app/serviceAccountKey.json:ro
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
